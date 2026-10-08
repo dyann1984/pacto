@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Brand } from "@/components/brand";
+import { GoogleAuthButton } from "@/components/google-auth-button";
 import { isConfigured } from "@/lib/supabase";
 import { signIn } from "./actions";
 export default async function SignIn({
@@ -37,15 +38,23 @@ export default async function SignIn({
           <div className="notice" role="status">
             <strong>Configuración pendiente</strong>
             <p>
-              Conecta Supabase y aplica la migración de Foundation para
-              habilitar el acceso. No se ha creado una sesión DEMO.
+              Conecta Supabase y aplica las migraciones para habilitar el
+              acceso. No se ha creado una sesión DEMO.
             </p>
           </div>
         ) : status === "invalid" ? (
           <div className="notice" role="alert">
             No se pudo iniciar sesión. Comprueba tus credenciales.
           </div>
+        ) : status === "check-email" ? (
+          <div className="notice notice-info" role="status">
+            Revisa tu correo y confirma tu cuenta antes de iniciar sesión.
+          </div>
         ) : null}
+        <GoogleAuthButton next="/pactos" />
+        <p className="fine-print" style={{ textAlign: "center" }}>
+          o con tu correo
+        </p>
         <form action={signIn}>
           <label>
             Correo electrónico
@@ -73,8 +82,10 @@ export default async function SignIn({
           </button>
         </form>
         <p className="fine-print">
-          Usuarios provisionados en Supabase Auth. Los escenarios se identifican
-          como DEMO; no procesan pagos.
+          <Link href="/forgot-password">¿Olvidaste tu contraseña?</Link>
+        </p>
+        <p className="fine-print">
+          ¿No tienes cuenta? <Link href="/sign-up">Regístrate</Link>
         </p>
       </section>
     </main>

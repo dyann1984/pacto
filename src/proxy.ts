@@ -22,5 +22,13 @@ export async function proxy(request: NextRequest) {
   return response;
 }
 export const config = {
-  matcher: ["/pactos/:path*", "/sign-in", "/api/:path*"],
+  matcher: [
+    "/pactos/:path*",
+    "/admin/:path*",
+    "/sign-in",
+    "/sign-up",
+    "/forgot-password",
+    "/reset-password",
+    "/api/:path*",
+  ],
 };
