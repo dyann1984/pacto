@@ -853,3 +853,47 @@ summary {
     transition: none;
   }
 }
+
+/* Fase 2: cierre, cancelación y análisis de IA */
+.notice-info {
+  border-color: #b9c7d8;
+  background: #eef3f9;
+  color: var(--navy-soft);
+}
+.badge-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+.danger-zone {
+  border-color: #e7c4c4;
+}
+.danger-zone summary {
+  color: var(--danger);
+}
+.analysis {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+}
+.finding {
+  border-left: 3px solid var(--gold);
+  padding: 4px 0 4px 12px;
+}
+.finding blockquote {
+  margin: 8px 0;
+  padding: 8px 12px;
+  background: var(--canvas);
+  border-radius: var(--radius-control);
+  font-style: italic;
+  color: var(--ink);
+}
+.finding p {
+  margin: 6px 0 0;
+}
+@media (max-width: 640px) {
+  .badge-group {
+    justify-content: flex-start;
+  }
+}
