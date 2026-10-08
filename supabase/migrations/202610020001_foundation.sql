@@ -1,3 +1,11 @@
+-- Seguro para reintentos: si el esquema ya existe, la transacción se revierte sin cambios.
+begin;
+do $$
+begin
+  if exists (select 1 from information_schema.tables where table_schema='public' and table_name='pactos') then
+    raise exception 'MIGRATION_ALREADY_APPLIED: 202610020001_foundation.sql';
+  end if;
+end $$;
 -- Apply through the Supabase SQL editor as database owner. No service key in app.
 create table public.profiles (
  id uuid primary key references auth.users(id), display_name text not null default ''
@@ -143,3 +151,4 @@ end; $$;
 
 revoke execute on function public.is_participant(uuid),public.can_read_agreement(uuid),public.can_read_milestone(uuid),public.create_pacto(text,text,bigint,text),public.add_seller(uuid,uuid),public.submit_agreement(uuid),public.accept_agreement(uuid),public.revise_agreement(uuid,text,bigint) from public,anon;
 grant execute on function public.is_participant(uuid),public.can_read_agreement(uuid),public.can_read_milestone(uuid),public.create_pacto(text,text,bigint,text),public.add_seller(uuid,uuid),public.submit_agreement(uuid),public.accept_agreement(uuid),public.revise_agreement(uuid,text,bigint) to authenticated;
+commit;

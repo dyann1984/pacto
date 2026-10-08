@@ -1,6 +1,20 @@
 -- PACTO Fase 2: cierre con doble confirmación, cancelación auditada y análisis de IA.
 -- Aplicar como propietario de base después de 202610020001_foundation.sql.
--- Idempotencia no garantizada: ejecutar una sola vez por proyecto.
+-- Seguro para reintentos: si la migración ya existe, la transacción se revierte sin cambios.
+-- Ver docs/supabase-migrations.md antes de ejecutar.
+
+begin;
+
+-- 0. Guardas: prerrequisito presente y migración no aplicada todavía -------------
+do $$
+begin
+  if not exists (select 1 from information_schema.tables where table_schema='public' and table_name='participants') then
+    raise exception 'PREREQUISITE_MISSING: aplicar primero 202610020001_foundation.sql';
+  end if;
+  if exists (select 1 from information_schema.columns where table_schema='public' and table_name='pactos' and column_name='status') then
+    raise exception 'MIGRATION_ALREADY_APPLIED: 202610080001_closure_cancellation_ai.sql';
+  end if;
+end $$;
 
 -- 1. Estado del Pacto y detalle de auditoría ------------------------------------
 alter table public.pactos
@@ -164,3 +178,5 @@ end; $$;
 -- 9. Permisos: solo usuarios autenticados ejecutan las RPC nuevas ----------------
 revoke execute on function public.confirm_closure(uuid,text),public.cancel_pacto(uuid,text),public.record_ai_analysis(uuid,text,text,jsonb) from public,anon;
 grant execute on function public.confirm_closure(uuid,text),public.cancel_pacto(uuid,text),public.record_ai_analysis(uuid,text,text,jsonb) to authenticated;
+
+commit;
