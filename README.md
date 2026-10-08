@@ -2,66 +2,99 @@
 
 **AI Commerce. Real Results.**
 
-Convierte tus acuerdos en resultados reales.
+Convierte tus acuerdos en resultados reales: un Pacto reúne a comprador y proveedor, define alcance e importe, registra cada versión y cada decisión, y permite cerrarlo o cancelarlo con evidencia auditable. Un asistente de IA revisa el texto del acuerdo y señala ambigüedades, obligaciones, fechas, riesgos e inconsistencias, sin decidir por las partes.
 
-PHASE 1 Foundation. Código fuente exclusivamente en `L:\PACTO`.
+## Alcance actual
 
-## Estado honesto
+Fase 2 autorizada para el concurso. Incluye:
 
-UI, dominio, migración y pruebas implementados. IA, evidencia, PayPal y cambios de alcance están fuera de esta fase. Todos los Pactos creados son DEMO; no hay operaciones Sandbox ni LIVE. No existe un bypass local de autenticación. Sin configuración Supabase, el acceso queda deshabilitado.
+- Autenticación con Supabase Auth y sesiones SSR (sin bypass local).
+- Pactos con participantes BUYER/SELLER, acuerdos versionados, revisión y aceptación por ambas partes.
+- **Cierre**: requiere un acuerdo ACCEPTED y ninguna propuesta pendiente; cada parte confirma con nota opcional, y el Pacto pasa a CLOSED cuando confirman ambas.
+- **Cancelación**: cualquier participante de un Pacto ACTIVE puede cancelarlo con motivo de 10 a 500 caracteres. Es definitiva.
+- **Historial**: `audit_events` registra cada acción con actor y, cuando aplica, su detalle (nota de cierre, motivo de cancelación, modelo de IA).
+- **Análisis de IA** (`src/lib/ai.ts`): llama a la API de Anthropic con la clave del servidor, valida la salida con un esquema estricto y registra el resultado con modelo, huella SHA-256 de la entrada y autor. Sin clave configurada, informa `NOT_CONFIGURED` y no muestra resultados simulados.
+
+Todos los Pactos son DEMO. No hay pagos, PayPal, Sandbox ni LIVE. La IA no modifica acuerdos ni estados.
 
 ## Requisitos
 
-- Node.js 22 o superior; pnpm 11.
-- Instancia Supabase dedicada a PACTO y dos usuarios Auth para la comprobación conectada.
-- Credenciales públicas: URL y publishable key. No necesita service_role en la aplicación.
+- Node.js 22 o superior.
+- pnpm 11.28.5. Si `pnpm` no está en el PATH, usar `corepack pnpm@11.28.5`.
+- Un proyecto Supabase dedicado a PACTO con dos usuarios DEMO confirmados.
+- Opcional para análisis real: una clave de API de Anthropic.
 
-## Inicio
+## Configuración
 
 ```powershell
-Set-Location L:\PACTO
-pnpm install --frozen-lockfile
 Copy-Item .env.example .env.local
-# Completar .env.local sin compartir secretos por chat.
-pnpm dev --webpack
+# Completar .env.local en la máquina local. Nunca subir ese archivo.
 ```
 
-Abre http://127.0.0.1:3000. `--webpack` evita depender de Turbopack nativo en equipos que bloquean SWC; Next puede utilizar su fallback WASM. pnpm incluye overrides WASM de Rollup y esbuild para pruebas en Windows.
+| Variable | Obligatoria | Uso |
+| --- | --- | --- |
+| `NEXT_PUBLIC_SUPABASE_URL` | Sí | URL del proyecto Supabase |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Sí | Clave pública (no service_role) |
+| `ANTHROPIC_API_KEY` | Para IA real | Solo servidor; sin prefijo `NEXT_PUBLIC_` |
+| `ANTHROPIC_MODEL` | No | Por defecto `claude-sonnet-5-5` |
 
-## Supabase
+## Base de datos
 
-1. Aplicar `supabase/migrations/202610020001_foundation.sql` desde SQL Editor como propietario. No aplicarla a una base ajena o con tablas homónimas.
-2. Crear dos usuarios de prueba en Auth y confirmar sus correos. Identificarlos explícitamente como DEMO en sus nombres. No usar identidades de terceros.
-3. Configurar `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` en `.env.local`.
-4. Reiniciar la aplicación. Iniciar sesión como comprador; crear Pacto; añadir el UUID Auth del proveedor.
-5. Enviar a revisión. Aceptar con cada usuario desde sesiones independientes. Ambos deben aparecer registrados con sus IDs auténticos.
-6. Crear un segundo Pacto con otra combinación de participantes y ejecutar la matriz de aislamiento de `docs/architecture.md`.
+Aplicar en orden, desde el SQL Editor como propietario del proyecto dedicado:
 
-Sin instancias/credenciales, las pruebas locales validan PostgreSQL mediante PGlite y mockean el proveedor de identidad en pruebas HTTP. No equivalen a verificar Supabase Auth remoto ni PostgREST desplegado.
+1. `supabase/migrations/202610020001_foundation.sql` (Fase 1)
+2. `supabase/migrations/202610080001_closure_cancellation_ai.sql` (cierre, cancelación, IA)
+
+Las migraciones no son idempotentes: ejecutar cada una una sola vez. RLS está activo en todas las tablas; los clientes no tienen INSERT/UPDATE/DELETE y todas las escrituras pasan por RPC que usan `auth.uid()`.
+
+## Ejecutar
+
+```powershell
+corepack pnpm@11.28.5 install --frozen-lockfile
+corepack pnpm@11.28.5 dev
+```
+
+Abrir http://127.0.0.1:3000.
 
 ## Comprobaciones
 
 ```powershell
-pnpm lint
-pnpm typecheck
-pnpm test
-pnpm test:authorization
-pnpm test:rls
-pnpm build
-pnpm start
+corepack pnpm@11.28.5 lint
+corepack pnpm@11.28.5 typecheck
+corepack pnpm@11.28.5 test
+corepack pnpm@11.28.5 build
 ```
 
-Las pruebas RLS ejecutan la migración real en PostgreSQL embebido, con roles `anon`/`authenticated` y `auth.uid()` de prueba. Nunca crean usuarios de producción. Cubren acceso a datos, RPC, auditoría y aceptación/versionado.
+`pnpm test` ejecuta:
+
+- `tests/domain.test.ts`: invariantes del dominio.
+- `tests/authorization.test.ts` y `tests/api-idor.test.ts`: autorización y acceso HTTP entre usuarios.
+- `tests/rls.test.ts`: RLS y RPC de la Fase 1 sobre PostgreSQL embebido (PGlite).
+- `tests/closure-ai.rls.test.ts`: cierre con doble confirmación, bloqueo de cambios tras cierre o cancelación, motivo obligatorio, auditoría, RLS de confirmaciones y evidencia de IA.
+- `tests/agreement-analysis.test.ts`: prompt, validación de salida y llamada al proveedor con `fetch` simulado (sin red).
+
+Las pruebas de PGlite validan el SQL real, pero **no sustituyen** la verificación contra el Supabase remoto.
+
+## Integración con Supabase remoto (pendiente de verificación)
+
+Estado al cierre de esta entrega: el inicio de sesión DEMO fallaba con `invalid_credentials`. La configuración pública de Auth muestra signups habilitados y confirmación de correo activa. Mientras los usuarios DEMO no estén confirmados y con la contraseña de `.env.local`, la autenticación real no funciona. Ver `docs/architecture.md` (matriz de comprobación) y el guion de demostración.
 
 ## Estructura
 
-- `src/domain`: entidades, schemas e invariantes independientes de UI.
+- `src/domain`: entidades, invariantes y análisis de IA (prompt y esquema de salida), sin dependencias de UI.
 - `src/application`: lectura autorizada del Pacto.
-- `src/lib`: cliente Supabase SSR y sesión validada.
+- `src/lib`: cliente Supabase SSR, sesión validada y proveedor de IA (solo servidor).
 - `src/app`: pantallas, Server Actions y endpoint de lectura.
-- `src/proxy.ts`: renovación de cookies; no constituye el control de autorización.
-- `supabase/migrations`: esquema, RLS y operaciones transaccionales.
-- `tests`: dominio, autorización, HTTP IDOR y PostgreSQL RLS.
-- `public/pacto-mark.svg`: marca vectorial propia inspirada en la referencia aprobada.
+- `src/proxy.ts`: renovación de cookies; no es el control de autorización.
+- `supabase/migrations`: esquema, RLS, RPC transaccionales y auditoría.
+- `tests`: dominio, autorización, IDOR HTTP, RLS en PostgreSQL, IA.
+- `.github/workflows/ci.yml`: lint, typecheck, pruebas y build en cada push y pull request.
 
-No hay SDK de IA ni PayPal, claves correspondientes, metrics fake, storage público o módulos simulados. No avanzar a PHASE 2 sin autorización.
+## Límites conocidos
+
+- Un solo hito y criterio por versión; el editor multi-hito queda para una fase posterior.
+- El proveedor se incorpora por UUID de una identidad Auth ya provisionada; no hay invitaciones.
+- La cancelación es unilateral (decisión de producto documentada); el cierre requiere ambas partes.
+- Los análisis de IA se registran tal como los envía la aplicación. Un participante autenticado con acceso directo a la RPC `record_ai_analysis` podría registrar un resultado manual; la huella y el modelo permiten detectarlo en la auditoría, pero no lo impiden.
+- No hay certificación de firma electrónica ni asesoría jurídica.
+- No hay despliegue público todavía; ver `docs/architecture.md`.

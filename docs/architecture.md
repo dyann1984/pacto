@@ -14,6 +14,15 @@ SELECT permite solo membresía para Pactos, participantes, acuerdos y audit trai
 
 RPC: create_pacto, add_seller, submit_agreement, accept_agreement y revise_agreement. Usan `auth.uid()` y nunca aceptan actor o payload de auditoría del cliente. Transacción única une cambio y evento. Aceptación bloquea el registro del acuerdo para serializar firmas. Cantidad/moneda y estados se validan de nuevo en PostgreSQL.
 
+## Fase 2: cierre, cancelación e IA
+
+- `pactos.status`: ACTIVE, CLOSED o CANCELLED. Todas las RPC de acuerdos (`add_seller`, `submit_agreement`, `accept_agreement`, `revise_agreement`) rechazan cambios con `PACTO_NOT_ACTIVE`.
+- `confirm_closure`: requiere un acuerdo ACCEPTED y ningún borrador o revisión pendiente. Cada participante confirma una vez; con dos confirmaciones el Pacto pasa a CLOSED. Cualquier edición de alcance borra las confirmaciones.
+- `cancel_pacto`: solo en ACTIVE, motivo de 10 a 500 caracteres, registrado en `pactos.status_reason` y en auditoría.
+- `ai_analyses`: resultado validado, modelo, huella SHA-256 de la entrada y autor. Legible solo por participantes. Se registra con `record_ai_analysis`.
+- Auditoría: `audit_events.detail` guarda la nota de cierre, el motivo de cancelación o el modelo de IA.
+- Proveedor de IA: `src/lib/ai.ts`, Anthropic Messages API. Sin `ANTHROPIC_API_KEY` devuelve `NOT_CONFIGURED`.
+
 ## Matriz de comprobación conectada pendiente
 
 Provisionar compradores A/B y proveedor S; crear Pacto A con A/S, Pacto B con B/A. Verificar en dos sesiones y con API/PostgREST:
