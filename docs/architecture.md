@@ -23,6 +23,16 @@ RPC: create_pacto, add_seller, submit_agreement, accept_agreement y revise_agree
 - Auditoría: `audit_events.detail` guarda la nota de cierre, el motivo de cancelación o el modelo de IA.
 - Proveedor de IA: `src/lib/ai.ts`, Anthropic Messages API. Sin `ANTHROPIC_API_KEY` devuelve `NOT_CONFIGURED`.
 
+## Fase 3: registro público, roles y panel administrativo
+
+- Registro con correo y contraseña (`/sign-up`) y con Google OAuth (botón cliente + `/auth/callback`). Confirmación de correo, recuperación de contraseña (`/forgot-password`, `/reset-password`) y cierre de sesión. Un solo Route Handler (`/auth/callback`) intercambia el código PKCE para los tres flujos (confirmación, recuperación, OAuth), con una guarda contra redirecciones abiertas (`next` debe ser una ruta interna).
+- `profiles.role`: `'user'` o `'admin'`, por defecto `'user'`. Se asigna en alta por el trigger `on_auth_user_created` (SECURITY DEFINER), nunca por el cliente ni por el formulario de registro — ningún valor enviado por quien se registra puede influir en el rol.
+- `is_admin()`: helper SECURITY DEFINER que lee `profiles.role` para `auth.uid()`.
+- RLS aditivo: políticas `admin_read_*` en `profiles`, `pactos`, `participants`, `agreements` y `audit_events` dan visibilidad total a `is_admin()`, sin reducir el aislamiento existente para usuarios normales (las políticas son OR, nunca reemplazan las anteriores).
+- `admin_list_users()`: RPC SECURITY DEFINER que expone campos no sensibles de `auth.users` (correo, confirmación, últimos accesos) solo a administradores; nunca expone hashes de contraseña. `auth.users` no tiene ningún grant directo para clientes.
+- Elevación a `admin`: migración controlada y separada (`202610090002_assign_owner_admin.sql`) que verifica UUID y correo exactos de `auth.users` antes de escribir; no modifica identidad ni contraseña. Es la única vía para obtener el rol; no existe ninguna acción de UI que lo conceda.
+- `/admin`: protegido por `requireSession()` más verificación de `profiles.role==='admin'` (404, no redirección, para no revelar la ruta). Panel de solo lectura: usuarios registrados, Pactos y acuerdos con su estado, actividad y auditoría recientes.
+
 ## Matriz de comprobación conectada pendiente
 
 Provisionar compradores A/B y proveedor S; crear Pacto A con A/S, Pacto B con B/A. Verificar en dos sesiones y con API/PostgREST:

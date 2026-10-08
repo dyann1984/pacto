@@ -6,16 +6,18 @@ Convierte tus acuerdos en resultados reales: un Pacto reúne a comprador y prove
 
 ## Alcance actual
 
-Fase 2 autorizada para el concurso. Incluye:
+Fase 3 autorizada para el concurso. Incluye:
 
-- Autenticación con Supabase Auth y sesiones SSR (sin bypass local).
+- Autenticación con Supabase Auth y sesiones SSR (sin bypass local). Registro con correo y contraseña o con Google, confirmación de correo, recuperación de contraseña y cierre de sesión.
+- Roles `user`/`admin`: todo registro nuevo recibe `user` por un trigger de base de datos; `admin` solo se asigna mediante una migración controlada que verifica identidad, nunca desde el formulario de registro ni desde la interfaz.
+- `/admin`: panel de solo lectura (usuarios, Pactos y su estado, actividad y auditoría), exclusivo para administradores; RLS lo exige también a nivel de base de datos, no solo en la pantalla.
 - Pactos con participantes BUYER/SELLER, acuerdos versionados, revisión y aceptación por ambas partes.
 - **Cierre**: requiere un acuerdo ACCEPTED y ninguna propuesta pendiente; cada parte confirma con nota opcional, y el Pacto pasa a CLOSED cuando confirman ambas.
 - **Cancelación**: cualquier participante de un Pacto ACTIVE puede cancelarlo con motivo de 10 a 500 caracteres. Es definitiva.
 - **Historial**: `audit_events` registra cada acción con actor y, cuando aplica, su detalle (nota de cierre, motivo de cancelación, modelo de IA).
 - **Análisis de IA** (`src/lib/ai.ts`): llama a la API de Anthropic con la clave del servidor, valida la salida con un esquema estricto y registra el resultado con modelo, huella SHA-256 de la entrada y autor. Sin clave configurada, informa `NOT_CONFIGURED` y no muestra resultados simulados.
 
-Todos los Pactos son DEMO. No hay pagos, PayPal, Sandbox ni LIVE. La IA no modifica acuerdos ni estados.
+Todos los Pactos son DEMO. No hay pagos, PayPal, Sandbox ni LIVE. La IA no modifica acuerdos ni estados. Google OAuth está en el código pero deshabilitado en Supabase hasta configurar credenciales (`docs/google-oauth-setup.md`).
 
 ## Requisitos
 
@@ -44,8 +46,10 @@ Aplicar en orden, desde el SQL Editor como propietario del proyecto dedicado:
 
 1. `supabase/migrations/202610020001_foundation.sql` (Fase 1)
 2. `supabase/migrations/202610080001_closure_cancellation_ai.sql` (cierre, cancelación, IA)
+3. `supabase/migrations/202610090001_roles_admin.sql` (registro, roles, panel admin)
+4. `supabase/migrations/202610090002_assign_owner_admin.sql` (asigna `admin` a una única cuenta verificada; editar el UUID y correo antes de usarla en otro proyecto)
 
-Las migraciones no son idempotentes: ejecutar cada una una sola vez. RLS está activo en todas las tablas; los clientes no tienen INSERT/UPDATE/DELETE y todas las escrituras pasan por RPC que usan `auth.uid()`.
+Usar `supabase/preflight.sql` antes de cada una para saber cuál aplicar. Las migraciones no son idempotentes: ejecutar cada una una sola vez. RLS está activo en todas las tablas; los clientes no tienen INSERT/UPDATE/DELETE y todas las escrituras pasan por RPC que usan `auth.uid()`.
 
 ## Ejecutar
 
