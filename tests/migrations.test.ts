@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 const FOUNDATION = "supabase/migrations/202610020001_foundation.sql";
 const CLOSURE = "supabase/migrations/202610080001_closure_cancellation_ai.sql";
+const ROLES = "supabase/migrations/202610090001_roles_admin.sql";
 const PREFLIGHT = "supabase/preflight.sql";
 
 const databases: PGlite[] = [];
@@ -13,7 +14,7 @@ async function freshDatabase() {
   const db = new PGlite();
   databases.push(db);
   await db.exec(
-    "create role anon; create role authenticated; create schema auth; create table auth.users(id uuid primary key); create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$; grant usage on schema auth,public to authenticated,anon; grant execute on function auth.uid() to authenticated,anon;",
+    "create role anon; create role authenticated; create schema auth; create table auth.users(id uuid primary key, email text); create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$; grant usage on schema auth,public to authenticated,anon; grant execute on function auth.uid() to authenticated,anon;",
   );
   return db;
 }
@@ -36,22 +37,28 @@ describe("migration sequencing and safety", () => {
     expect(Object.values(state).every((ok) => ok === false)).toBe(true);
   });
 
-  it("applies foundation then closure/AI and reports every object present", async () => {
+  it("applies foundation, closure/AI and roles/admin in order, each stage adding to the state", async () => {
     const db = await freshDatabase();
     await db.exec(await readFile(FOUNDATION, "utf8"));
     const afterFoundation = await preflight(db);
     expect(afterFoundation["foundation: tabla participants"]).toBe(true);
     expect(afterFoundation["cierre: columna pactos.status"]).toBe(false);
+    expect(afterFoundation["roles: columna profiles.role"]).toBe(false);
 
     await db.exec(await readFile(CLOSURE, "utf8"));
     const afterClosure = await preflight(db);
-    expect(Object.values(afterClosure).every((ok) => ok === true)).toBe(true);
+    expect(afterClosure["cierre: tabla closure_confirmations"]).toBe(true);
+    expect(afterClosure["roles: rpc admin_list_users"]).toBe(false);
+
+    await db.exec(await readFile(ROLES, "utf8"));
+    const afterRoles = await preflight(db);
+    expect(Object.values(afterRoles).every((ok) => ok === true)).toBe(true);
   });
 
   it("foundation is also guarded: a re-run aborts and leaves data untouched", async () => {
     const db = await freshDatabase();
     await db.exec(await readFile(FOUNDATION, "utf8"));
-    await db.query("insert into auth.users values('11111111-1111-4111-8111-111111111111')");
+    await db.query("insert into auth.users(id) values('11111111-1111-4111-8111-111111111111')");
     await expect(db.exec(await readFile(FOUNDATION, "utf8"))).rejects.toThrow(
       "MIGRATION_ALREADY_APPLIED",
     );
@@ -73,11 +80,26 @@ describe("migration sequencing and safety", () => {
     expect(state["cierre: tabla closure_confirmations"]).toBe(false);
   });
 
-  it("is safe to retry: a second run aborts without partial changes", async () => {
+  it("refuses to run the roles/admin migration before closure/AI", async () => {
+    const db = await freshDatabase();
+    await db.exec(await readFile(FOUNDATION, "utf8"));
+    await expect(db.exec(await readFile(ROLES, "utf8"))).rejects.toThrow(
+      "PREREQUISITE_MISSING",
+    );
+    await db.exec("rollback");
+    expect((await preflight(db))["roles: columna profiles.role"]).toBe(false);
+  });
+
+  it("is safe to retry: a second run of any migration aborts without partial changes", async () => {
     const db = await freshDatabase();
     await db.exec(await readFile(FOUNDATION, "utf8"));
     await db.exec(await readFile(CLOSURE, "utf8"));
     await expect(db.exec(await readFile(CLOSURE, "utf8"))).rejects.toThrow(
+      "MIGRATION_ALREADY_APPLIED",
+    );
+    await db.exec("rollback");
+    await db.exec(await readFile(ROLES, "utf8"));
+    await expect(db.exec(await readFile(ROLES, "utf8"))).rejects.toThrow(
       "MIGRATION_ALREADY_APPLIED",
     );
     await db.exec("rollback");
@@ -91,6 +113,18 @@ describe("migration sequencing and safety", () => {
     await db.exec(await readFile(CLOSURE, "utf8"));
     const { rows } = await db.query<{ table_name: string; privilege_type: string; grantee: string }>(
       "select table_name, privilege_type, grantee from information_schema.role_table_grants where table_schema='public' and table_name in ('closure_confirmations','ai_analyses') and grantee in ('anon','authenticated')",
+    );
+    expect(rows.filter((r) => r.privilege_type !== "SELECT")).toEqual([]);
+    expect(rows.some((r) => r.grantee === "anon")).toBe(false);
+  });
+
+  it("keeps profiles without anon or authenticated write grants after roles/admin", async () => {
+    const db = await freshDatabase();
+    await db.exec(await readFile(FOUNDATION, "utf8"));
+    await db.exec(await readFile(CLOSURE, "utf8"));
+    await db.exec(await readFile(ROLES, "utf8"));
+    const { rows } = await db.query<{ privilege_type: string; grantee: string }>(
+      "select privilege_type, grantee from information_schema.role_table_grants where table_schema='public' and table_name='profiles' and grantee in ('anon','authenticated')",
     );
     expect(rows.filter((r) => r.privilege_type !== "SELECT")).toEqual([]);
     expect(rows.some((r) => r.grantee === "anon")).toBe(false);

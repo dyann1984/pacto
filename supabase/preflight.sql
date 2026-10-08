@@ -32,5 +32,13 @@ from (values
     coalesce((select c.relrowsecurity from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relname='ai_analyses'), false)),
   ('seguridad: anon sin SELECT en pactos',
     case when to_regclass('public.pactos') is null then false
-         else not has_table_privilege('anon', 'public.pactos', 'SELECT') end)
+         else not has_table_privilege('anon', 'public.pactos', 'SELECT') end),
+  ('roles: columna profiles.role',
+    exists(select 1 from information_schema.columns where table_schema='public' and table_name='profiles' and column_name='role')),
+  ('roles: trigger on_auth_user_created',
+    exists(select 1 from pg_trigger where tgname='on_auth_user_created')),
+  ('roles: rpc admin_list_users',
+    exists(select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname='admin_list_users'))
+  -- La asignación de admin a la propietaria se verifica aparte (202610090002), no aquí:
+  -- referenciar profiles.role directamente falla en tiempo de análisis si la columna no existe todavía.
 ) as checks(check_name, ok);
