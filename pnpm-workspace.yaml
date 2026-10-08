@@ -1,6 +1,5 @@
-packages:
+﻿packages:
   - "."
-storeDir: L:/PACTO/.cache/pnpm-store
 allowBuilds:
   agent-browser: false
   esbuild: true
