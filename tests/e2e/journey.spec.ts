@@ -56,7 +56,8 @@ test("two DEMO visitors complete create → invite → join → review → accep
     await expect(buyer.getByText("Esperando que la otra parte confirme el cierre")).toBeVisible();
     await seller.goto(`/pactos/${pactoId}`);
     await seller.getByRole("button", { name: "Confirmar cierre" }).click();
-    await expect(seller.getByText("Ambas partes confirmaron")).toBeVisible();
+    await expect(seller.getByText("Ambas partes confirmaron. El Pacto está cerrado.")).toBeVisible();
+    await expect(seller.getByRole("heading", { name: "Pacto cerrado" })).toBeVisible();
     await expectBadge(seller, /Cerrado/);
 
     // La actividad muestra personas, no identificadores.
