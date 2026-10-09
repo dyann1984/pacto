@@ -3,6 +3,8 @@ import { Brand } from "@/components/brand";
 import { isConfigured } from "@/lib/supabase";
 import { requestPasswordReset } from "./actions";
 
+export const dynamic = "force-dynamic";
+
 export default async function ForgotPassword({
   searchParams,
 }: {
