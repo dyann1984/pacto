@@ -101,15 +101,18 @@ end; $$;
 -- 4. Aceptar la invitación: quien la abre se une como proveedor -------------------
 create function public.accept_invitation(p_token text) returns uuid
 language plpgsql security definer set search_path='' as $$
-declare v public.invitations;
+declare v public.invitations; v_hash text := encode(sha256(convert_to(coalesce(p_token, ''), 'UTF8')), 'hex');
 begin
   if auth.uid() is null then raise exception 'AUTH_REQUIRED'; end if;
-  select * into v from public.invitations where token_sha256=encode(sha256(convert_to(coalesce(p_token, ''), 'UTF8')), 'hex') for update;
+  select * into v from public.invitations where token_sha256=v_hash;
   if v.id is null then raise exception 'INVITATION_NOT_FOUND'; end if;
+  -- Mismo orden de bloqueo que create_invitation (Pacto y después invitación) para
+  -- que aceptar y regenerar a la vez se serialicen sin interbloqueo; se relee tras bloquear.
+  perform 1 from public.pactos where id=v.pacto_id for update;
+  select * into v from public.invitations where id=v.id for update;
   if v.accepted_by=auth.uid() then return v.pacto_id; end if;
   if v.accepted_at is not null or v.revoked_at is not null then raise exception 'INVITATION_USED'; end if;
   if v.expires_at<now() then raise exception 'INVITATION_EXPIRED'; end if;
-  perform 1 from public.pactos where id=v.pacto_id for update;
   if (select status from public.pactos where id=v.pacto_id)<>'ACTIVE' then raise exception 'PACTO_NOT_ACTIVE'; end if;
   if exists(select 1 from public.participants where pacto_id=v.pacto_id and user_id=auth.uid()) then raise exception 'DISTINCT_PARTIES_REQUIRED'; end if;
   if exists(select 1 from public.participants where pacto_id=v.pacto_id and role='SELLER') then raise exception 'SELLER_ALREADY_JOINED'; end if;

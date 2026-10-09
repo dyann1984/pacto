@@ -162,6 +162,44 @@ describe.sequential("invitations: secure link instead of a raw user id", () => {
     expect((await scalar<{ id: string }>(SELLER, "select public.accept_invitation($1) id", [latest])).id).toBe(third);
   });
 
+  it("an expired link cannot be used and reveals nothing", async () => {
+    const pactoId = (
+      await scalar<{ id: string }>(BUYER, "select public.create_pacto('Acuerdo caducado','Alcance de un acuerdo con enlace caducado',1000) id")
+    ).id;
+    const expired = (await scalar<{ t: string }>(BUYER, "select public.create_invitation($1) t", [pactoId])).t;
+    await db.exec("reset role");
+    await db.query("update public.invitations set expires_at=now()-interval '1 minute' where pacto_id=$1", [pactoId]);
+    expect((await scalar<{ p: unknown }>(SELLER, "select public.invitation_preview($1) p", [expired])).p).toEqual({
+      status: "EXPIRED",
+    });
+    await expect(asUser(SELLER, "select public.accept_invitation($1)", [expired])).rejects.toThrow("INVITATION_EXPIRED");
+  });
+
+  it("a cancelled pacto accepts no invitation, old or new", async () => {
+    const pactoId = (
+      await scalar<{ id: string }>(BUYER, "select public.create_pacto('Acuerdo cancelado','Alcance de un acuerdo que se cancelará',1000) id")
+    ).id;
+    const link = (await scalar<{ t: string }>(BUYER, "select public.create_invitation($1) t", [pactoId])).t;
+    await asUser(BUYER, "select public.cancel_pacto($1,$2)", [pactoId, "Cancelado antes de invitar"]);
+    await expect(asUser(SELLER, "select public.accept_invitation($1)", [link])).rejects.toThrow("PACTO_NOT_ACTIVE");
+    await expect(asUser(BUYER, "select public.create_invitation($1)", [pactoId])).rejects.toThrow("PACTO_NOT_ACTIVE");
+  });
+
+  it("a DEMO visitor (no email) cannot take an email-restricted invitation", async () => {
+    const visitor = "77777777-7777-4777-8777-777777777777";
+    await db.exec("reset role");
+    await db.query("insert into auth.users(id) values($1)", [visitor]);
+    const pactoId = (
+      await scalar<{ id: string }>(BUYER, "select public.create_pacto('Acuerdo restringido','Alcance de un acuerdo con invitación nominal',1000) id")
+    ).id;
+    const link = (
+      await scalar<{ t: string }>(BUYER, "select public.create_invitation($1,$2) t", [pactoId, "proveedor@example.com"])
+    ).t;
+    await expect(asUser(visitor, "select public.accept_invitation($1)", [link])).rejects.toThrow(
+      "INVITATION_EMAIL_MISMATCH",
+    );
+  });
+
   it("anonymous (unauthenticated) role cannot call any invitation RPC", async () => {
     await db.exec("reset role; set role anon");
     await expect(db.query("select public.invitation_preview($1)", [token])).rejects.toThrow("permission denied");

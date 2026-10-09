@@ -4,6 +4,7 @@ import { getPacto } from "@/application/pactos";
 import { requireSession } from "@/lib/session";
 import { isAnalysisConfigured } from "@/lib/ai";
 import { InviteSeller } from "@/components/invite-seller";
+import { SubmitButton } from "@/components/submit-button";
 import {
   agreementStateLabels,
   currentStepIndex,
@@ -78,6 +79,10 @@ const aiMessages: Record<string, { tone: "info" | "error"; text: string }> = {
   failed: {
     tone: "error",
     text: "El análisis no se pudo completar. Intenta de nuevo más tarde.",
+  },
+  limit: {
+    tone: "info",
+    text: "Esta versión ya tiene el máximo de 3 análisis. Si cambian el acuerdo, podrán analizar la nueva versión.",
   },
   "not-configured": {
     tone: "info",
@@ -306,13 +311,13 @@ export default async function Center({
         {isActive && step.action === "submit" && (
           <form action={updatePacto}>
             {fields("submit")}
-            <button className="button">Enviar a revisión →</button>
+            <SubmitButton>Enviar a revisión →</SubmitButton>
           </form>
         )}
         {isActive && step.action === "accept" && (
           <form action={updatePacto}>
             {fields("accept")}
-            <button className="button">Aceptar versión {current.version} →</button>
+            <SubmitButton>Aceptar versión {current.version} →</SubmitButton>
           </form>
         )}
         {isActive && step.action === "confirm" && (
@@ -327,7 +332,7 @@ export default async function Center({
                 placeholder="Ej. Entrega revisada en sitio el 10 de octubre."
               />
             </label>
-            <button className="button">Confirmar cierre</button>
+            <SubmitButton>Confirmar cierre</SubmitButton>
           </form>
         )}
       </section>
@@ -384,7 +389,7 @@ export default async function Center({
                   Al guardar, ambas partes deberán aceptar de nuevo y se reinician las
                   confirmaciones de cierre. Las versiones aceptadas anteriores se conservan.
                 </p>
-                <button className="button button-light">Guardar cambios</button>
+                <SubmitButton className="button button-light">Guardar cambios</SubmitButton>
               </form>
             </details>
           )}
@@ -521,7 +526,7 @@ export default async function Center({
                   La cancelación es definitiva, queda registrada en la actividad y
                   bloquea cualquier cambio posterior.
                 </p>
-                <button className="button button-light">Cancelar Pacto</button>
+                <SubmitButton className="button button-light">Cancelar Pacto</SubmitButton>
               </form>
             </details>
           )}

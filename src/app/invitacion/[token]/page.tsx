@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { Brand } from "@/components/brand";
 import { isConfigured, supabase } from "@/lib/supabase";
 import { acceptInvitation } from "@/app/pactos/actions";
+import { SubmitButton } from "@/components/submit-button";
 
 export const dynamic = "force-dynamic";
 
@@ -177,7 +178,7 @@ export default async function Invitation({
       </p>
       <form action={acceptInvitation}>
         <input type="hidden" name="token" value={token} />
-        <button className="button">Unirme como proveedor →</button>
+        <SubmitButton pendingText="Uniéndote…">Unirme como proveedor →</SubmitButton>
       </form>
       <p className="fine-print">
         Entraste como {user.is_anonymous ? "visitante DEMO" : user.email}.

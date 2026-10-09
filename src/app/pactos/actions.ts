@@ -203,6 +203,8 @@ export async function acceptInvitation(form: FormData) {
   redirect(`/pactos/${data}?status=joined`);
 }
 
+const AI_ANALYSES_PER_VERSION = 3;
+
 // Asistencia de IA: solo lectura del acuerdo. Nunca cambia estados ni importes.
 export async function runAgreementAnalysis(form: FormData) {
   const { db, user } = await requireSession();
@@ -228,6 +230,13 @@ export async function runAgreementAnalysis(form: FormData) {
     .eq("agreement_id", agreementId)
     .order("sequence");
   if (milestoneError) redirect(`/pactos/${pactoId}?ai=failed`);
+  // Tope de coste: cada llamada al proveedor se paga, y cualquier visitante DEMO puede pulsar.
+  const { count, error: countError } = await db
+    .from("ai_analyses")
+    .select("id", { count: "exact", head: true })
+    .eq("agreement_id", agreementId);
+  if (countError) redirect(`/pactos/${pactoId}?ai=failed`);
+  if ((count ?? 0) >= AI_ANALYSES_PER_VERSION) redirect(`/pactos/${pactoId}?ai=limit`);
 
   let outcome;
   try {

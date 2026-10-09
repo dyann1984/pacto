@@ -21,8 +21,8 @@ test("el Pacto de ejemplo público es visible, de solo lectura, sin acciones dis
   await page.goto("/demo");
   await page.waitForURL(/\/pactos$/, { timeout: 15000 });
   await page.goto(`/pactos/${process.env.PACTO_DEMO_EXAMPLE_ID}`);
-  // "Pacto cerrado" aparece dos veces (aviso de estado y evento de auditoría): se acota.
-  await expect(page.getByText("Pacto cerrado", { exact: true })).toBeVisible();
+  // "Pacto cerrado" aparece en el panel de siguiente paso y en la actividad: se acota al título.
+  await expect(page.getByRole("heading", { name: "Pacto cerrado" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Confirmar cierre" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: /Analizar versión/ })).toHaveCount(0);
 });
