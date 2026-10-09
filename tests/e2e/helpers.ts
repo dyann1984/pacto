@@ -18,7 +18,7 @@ export async function signIn(page: Page, email: string, password: string) {
   await page.goto("/sign-in");
   await page.locator('input[name="email"]').fill(email);
   await page.locator('input[name="password"]').fill(password);
-  await page.locator("form button").first().click();
+  await page.getByRole("button", { name: "Entrar a mis Pactos" }).click();
   await page.waitForURL(/\/pactos$/);
 }
 
