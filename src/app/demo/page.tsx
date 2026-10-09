@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseBrowser } from "@/lib/supabase-browser";
+import { safeNextPath } from "@/lib/next-path";
 
 // Punto de entrada del modo DEMO: crea una sesión anónima real de Supabase
 // (auth.signInWithAnonymous) si el visitante no tiene ninguna, y lo envía a la
@@ -26,7 +27,9 @@ export default function Demo() {
           return;
         }
       }
-      if (!cancelled) router.replace("/pactos");
+      // Permite volver, por ejemplo, al enlace de invitación que trajo al visitante.
+      const next = safeNextPath(new URLSearchParams(window.location.search).get("next"));
+      if (!cancelled) router.replace(next);
     }
     enterDemo();
     return () => {

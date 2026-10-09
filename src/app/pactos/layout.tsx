@@ -16,25 +16,25 @@ export default async function PactoLayout({
         <Link href="/">
           <Brand />
         </Link>
-        <span className="nav-label">WORKSPACE</span>
+        <span className="nav-label">TU ESPACIO</span>
         <nav>
           <Link href="/pactos">▦ Mis Pactos</Link>
           <Link href="/pactos/new">＋ Crear Pacto</Link>
         </nav>
         <div className="sidebar-foot">
-          <span className="badge badge-dark">FOUNDATION</span>
+          <span className="badge badge-dark">CÓMO FUNCIONA</span>
           <p>
-            IA, evidencia y PayPal
+            Crea · Invita · Acepten
             <br />
-            Próxima fase
+            ambos · Cierren
           </p>
         </div>
       </aside>
       <div className="workspace-main">
         {isDemoVisitor && (
           <div className="notice notice-info demo-banner" role="status">
-            Estás en <strong>modo DEMO</strong>: sesión anónima, aislada de
-            cualquier usuario real. <Link href="/sign-up">Crea una cuenta</Link>{" "}
+            Estás en <strong>modo DEMO</strong>: una sesión temporal y privada,
+            separada de cualquier otro usuario. <Link href="/sign-up">Crea una cuenta</Link>{" "}
             para conservar tus Pactos.
           </div>
         )}

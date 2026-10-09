@@ -36,8 +36,8 @@ export default function Landing() {
             </Link>
           </div>
           <p className="fine-print">
-            Explora sin registrarte: sesión aislada y temporal, sin datos
-            reales. FOUNDATION · IA y pagos: próxima fase.
+            Explora sin registrarte: una sesión temporal y privada. Crea un
+            acuerdo, invita a un proveedor y ciérrenlo juntos.
           </p>
         </div>
         <div className="brand-panel">
@@ -94,7 +94,7 @@ export default function Landing() {
       <footer>
         <Brand />
         <span>AI Commerce. Real Results.</span>
-        <span>PHASE 1 · FOUNDATION</span>
+        <span>Acuerdos claros entre comprador y proveedor</span>
       </footer>
     </main>
   );

@@ -44,5 +44,9 @@ from (values
   ('demo: columna pactos.is_demo_example',
     exists(select 1 from information_schema.columns where table_schema='public' and table_name='pactos' and column_name='is_demo_example')),
   ('demo: rpc is_demo_pacto',
-    exists(select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname='is_demo_pacto'))
+    exists(select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname='is_demo_pacto')),
+  ('invitaciones: tabla invitations',
+    exists(select 1 from information_schema.tables where table_schema='public' and table_name='invitations')),
+  ('invitaciones: rpc accept_invitation',
+    exists(select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname='accept_invitation'))
 ) as checks(check_name, ok);

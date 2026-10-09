@@ -4,12 +4,17 @@ import { z } from "zod";
 import { supabase, isConfigured, logAuthError } from "@/lib/supabase";
 import { requestOrigin } from "@/lib/origin";
 import { emailOnlySchema } from "@/domain/account";
+import { safeNextPath } from "@/lib/next-path";
 export async function signIn(form: FormData) {
-  if (!isConfigured()) redirect("/sign-in?status=configuration");
+  const next = safeNextPath(form.get("next"));
+  // Conserva el destino (p. ej. un enlace de invitación) si hay que reintentar.
+  const back = (status: string) =>
+    `/sign-in?status=${status}${next === "/pactos" ? "" : `&next=${encodeURIComponent(next)}`}`;
+  if (!isConfigured()) redirect(back("configuration"));
   const input = z
     .object({ email: z.email(), password: z.string().min(8).max(128) })
     .safeParse({ email: form.get("email"), password: form.get("password") });
-  if (!input.success) redirect("/sign-in?status=invalid");
+  if (!input.success) redirect(back("invalid"));
   const db = await supabase();
   const { error } = await db.auth.signInWithPassword(input.data);
   if (error) {
@@ -17,14 +22,14 @@ export async function signIn(form: FormData) {
     // tanto correo inexistente como contraseña incorrecta (mismo mensaje, por
     // diseño, para no permitir enumerar cuentas). Las demás causas sí se separan
     // porque quien las ve ya demostró ser dueño de ese intento de acceso.
-    if (error.code === "email_not_confirmed") redirect("/sign-in?status=unconfirmed");
+    if (error.code === "email_not_confirmed") redirect(back("unconfirmed"));
     if (error.status === 429 || error.code === "over_request_rate_limit")
-      redirect("/sign-in?status=rate-limited");
-    if (error.code === "invalid_credentials") redirect("/sign-in?status=invalid");
+      redirect(back("rate-limited"));
+    if (error.code === "invalid_credentials") redirect(back("invalid"));
     logAuthError("signInWithPassword", error);
-    redirect("/sign-in?status=failed");
+    redirect(back("failed"));
   }
-  redirect("/pactos");
+  redirect(next);
 }
 export async function resendConfirmation(form: FormData) {
   if (!isConfigured()) redirect("/sign-in?status=configuration");

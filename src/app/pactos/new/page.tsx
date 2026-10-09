@@ -11,16 +11,15 @@ export default async function Create({
         <div>
           <span className="eyebrow">DEL PROPÓSITO AL ACUERDO</span>
           <h1>Crear un Pacto</h1>
-          <p>Define la base. Después podrás revisarla con tu proveedor.</p>
+          <p>Define lo que esperas. Después invitarás a tu proveedor a revisarlo.</p>
         </div>
-        <span className="badge">DEMO</span>
       </div>
       <section className="card form-card">
         {status && (
           <div className="notice" role="alert">
             {status === "invalid"
               ? "Revisa los campos y el importe."
-              : "No se pudo crear el Pacto. Verifica la conexión y la migración."}
+              : "No se pudo crear el Pacto. Intenta de nuevo en unos minutos."}
           </div>
         )}
         <form action={createPacto}>
@@ -56,9 +55,9 @@ export default async function Create({
               required
             />
           </label>
-          <div className="notice">
-            Foundation crea un hito básico. Sin generación IA ni operación de
-            pago. El escenario se guarda como DEMO.
+          <div className="notice notice-info">
+            Después de crearlo podrás invitar a tu proveedor con un enlace seguro.
+            Ambos revisan y aceptan la misma versión. PACTO no ejecuta pagos.
           </div>
           <button className="button">Crear acuerdo →</button>
         </form>

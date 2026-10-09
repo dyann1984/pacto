@@ -10,3 +10,4 @@ playwright-report/
 .cache/
 .pnpm-store/
 .vercel
+supabase/.temp/

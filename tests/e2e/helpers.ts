@@ -6,12 +6,10 @@ export const demo = {
   aPassword: process.env.PACTO_DEMO_A_PASSWORD ?? "",
   bEmail: process.env.PACTO_DEMO_B_EMAIL ?? "",
   bPassword: process.env.PACTO_DEMO_B_PASSWORD ?? "",
-  // UUID Auth del usuario B (proveedor). Se obtiene en Authentication → Users.
-  bId: process.env.PACTO_DEMO_B_ID ?? "",
 };
 
 export const hasDemoCredentials = Boolean(
-  demo.aEmail && demo.aPassword && demo.bEmail && demo.bPassword && demo.bId,
+  demo.aEmail && demo.aPassword && demo.bEmail && demo.bPassword,
 );
 
 export async function signIn(page: Page, email: string, password: string) {
@@ -20,6 +18,12 @@ export async function signIn(page: Page, email: string, password: string) {
   await page.locator('input[name="password"]').fill(password);
   await page.getByRole("button", { name: "Entrar a mis Pactos" }).click();
   await page.waitForURL(/\/pactos$/);
+}
+
+// Visitante DEMO: sesión anónima real, sin correo ni contraseña.
+export async function enterDemo(page: Page, next?: string) {
+  await page.goto(next ? `/demo?next=${encodeURIComponent(next)}` : "/demo");
+  await page.waitForURL(next ? new RegExp(next.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")) : /\/pactos$/);
 }
 
 export function pactoIdFrom(url: string) {
