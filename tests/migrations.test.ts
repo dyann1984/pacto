@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it } from "vitest";
 const FOUNDATION = "supabase/migrations/202610020001_foundation.sql";
 const CLOSURE = "supabase/migrations/202610080001_closure_cancellation_ai.sql";
 const ROLES = "supabase/migrations/202610090001_roles_admin.sql";
+const DEMO = "supabase/migrations/202610100001_demo_example.sql";
 const PREFLIGHT = "supabase/preflight.sql";
 
 const databases: PGlite[] = [];
@@ -52,7 +53,12 @@ describe("migration sequencing and safety", () => {
 
     await db.exec(await readFile(ROLES, "utf8"));
     const afterRoles = await preflight(db);
-    expect(Object.values(afterRoles).every((ok) => ok === true)).toBe(true);
+    expect(afterRoles["roles: rpc admin_list_users"]).toBe(true);
+    expect(afterRoles["demo: columna pactos.is_demo_example"]).toBe(false);
+
+    await db.exec(await readFile(DEMO, "utf8"));
+    const afterDemo = await preflight(db);
+    expect(Object.values(afterDemo).every((ok) => ok === true)).toBe(true);
   });
 
   it("foundation is also guarded: a re-run aborts and leaves data untouched", async () => {
@@ -90,6 +96,15 @@ describe("migration sequencing and safety", () => {
     expect((await preflight(db))["roles: columna profiles.role"]).toBe(false);
   });
 
+  it("refuses to run the demo-example migration before roles/admin", async () => {
+    const db = await freshDatabase();
+    await db.exec(await readFile(FOUNDATION, "utf8"));
+    await db.exec(await readFile(CLOSURE, "utf8"));
+    await expect(db.exec(await readFile(DEMO, "utf8"))).rejects.toThrow("PREREQUISITE_MISSING");
+    await db.exec("rollback");
+    expect((await preflight(db))["demo: columna pactos.is_demo_example"]).toBe(false);
+  });
+
   it("is safe to retry: a second run of any migration aborts without partial changes", async () => {
     const db = await freshDatabase();
     await db.exec(await readFile(FOUNDATION, "utf8"));
@@ -100,6 +115,11 @@ describe("migration sequencing and safety", () => {
     await db.exec("rollback");
     await db.exec(await readFile(ROLES, "utf8"));
     await expect(db.exec(await readFile(ROLES, "utf8"))).rejects.toThrow(
+      "MIGRATION_ALREADY_APPLIED",
+    );
+    await db.exec("rollback");
+    await db.exec(await readFile(DEMO, "utf8"));
+    await expect(db.exec(await readFile(DEMO, "utf8"))).rejects.toThrow(
       "MIGRATION_ALREADY_APPLIED",
     );
     await db.exec("rollback");
@@ -125,6 +145,19 @@ describe("migration sequencing and safety", () => {
     await db.exec(await readFile(ROLES, "utf8"));
     const { rows } = await db.query<{ privilege_type: string; grantee: string }>(
       "select privilege_type, grantee from information_schema.role_table_grants where table_schema='public' and table_name='profiles' and grantee in ('anon','authenticated')",
+    );
+    expect(rows.filter((r) => r.privilege_type !== "SELECT")).toEqual([]);
+    expect(rows.some((r) => r.grantee === "anon")).toBe(false);
+  });
+
+  it("the demo-example migration adds no write grant on pactos for anon or authenticated", async () => {
+    const db = await freshDatabase();
+    await db.exec(await readFile(FOUNDATION, "utf8"));
+    await db.exec(await readFile(CLOSURE, "utf8"));
+    await db.exec(await readFile(ROLES, "utf8"));
+    await db.exec(await readFile(DEMO, "utf8"));
+    const { rows } = await db.query<{ privilege_type: string; grantee: string }>(
+      "select privilege_type, grantee from information_schema.role_table_grants where table_schema='public' and table_name='pactos' and grantee in ('anon','authenticated')",
     );
     expect(rows.filter((r) => r.privilege_type !== "SELECT")).toEqual([]);
     expect(rows.some((r) => r.grantee === "anon")).toBe(false);

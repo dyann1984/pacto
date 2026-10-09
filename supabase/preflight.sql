@@ -38,7 +38,11 @@ from (values
   ('roles: trigger on_auth_user_created',
     exists(select 1 from pg_trigger where tgname='on_auth_user_created')),
   ('roles: rpc admin_list_users',
-    exists(select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname='admin_list_users'))
+    exists(select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname='admin_list_users')),
   -- La asignación de admin a la propietaria se verifica aparte (202610090002), no aquí:
   -- referenciar profiles.role directamente falla en tiempo de análisis si la columna no existe todavía.
+  ('demo: columna pactos.is_demo_example',
+    exists(select 1 from information_schema.columns where table_schema='public' and table_name='pactos' and column_name='is_demo_example')),
+  ('demo: rpc is_demo_pacto',
+    exists(select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname='is_demo_pacto'))
 ) as checks(check_name, ok);
