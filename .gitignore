@@ -9,3 +9,4 @@ playwright-report/
 .pglite/
 .cache/
 .pnpm-store/
+.vercel
