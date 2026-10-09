@@ -29,3 +29,25 @@ export async function supabase() {
     },
   );
 }
+
+// Consulta pública y sin autenticar de Supabase (no requiere sesión ni clave privada).
+// Permite no presentar "Continuar con Google" como funcional mientras el proveedor
+// esté deshabilitado en el proyecto, en vez de dejar que el usuario lo descubra al fallar.
+export async function isGoogleOAuthEnabled(): Promise<boolean> {
+  if (!isConfigured()) return false;
+  try {
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/settings`,
+      {
+        headers: { apikey: process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY! },
+        next: { revalidate: 300 },
+      },
+    );
+    if (!response.ok) return false;
+    const data = (await response.json()) as { external?: { google?: boolean } };
+    return data.external?.google === true;
+  } catch {
+    // Falla cerrado: ante cualquier error de red, se trata como deshabilitado.
+    return false;
+  }
+}

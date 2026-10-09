@@ -2,9 +2,28 @@
 import { useState } from "react";
 import { supabaseBrowser } from "@/lib/supabase-browser";
 
-export function GoogleAuthButton({ next = "/pactos" }: { next?: string }) {
+export function GoogleAuthButton({
+  next = "/pactos",
+  enabled,
+}: {
+  next?: string;
+  // true/false: estado real verificado en el servidor. undefined: aún no se pudo
+  // verificar (se trata igual que deshabilitado; nunca se asume disponible).
+  enabled: boolean | undefined;
+}) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState(false);
+
+  if (!enabled) {
+    return (
+      <>
+        <button type="button" className="button button-light" disabled aria-disabled="true">
+          Continuar con Google
+        </button>
+        <p className="fine-print">Disponible próximamente.</p>
+      </>
+    );
+  }
 
   async function handleClick() {
     setPending(true);
