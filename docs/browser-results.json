@@ -1,0 +1,21 @@
+[
+  {
+    "viewport": "desktop",
+    "landing": 200,
+    "navigation": "PASS",
+    "protectedRoute": "REDIRECT_SIGN_IN",
+    "horizontalOverflow": false,
+    "consoleErrors": []
+  },
+  {
+    "viewport": "mobile",
+    "landing": 200,
+    "navigation": "PASS",
+    "protectedRoute": "REDIRECT_SIGN_IN",
+    "horizontalOverflow": false,
+    "consoleErrors": []
+  },
+  {
+    "unauthenticatedApiStatus": 503
+  }
+]

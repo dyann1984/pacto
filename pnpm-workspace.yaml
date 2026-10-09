@@ -1,0 +1,9 @@
+﻿packages:
+  - "."
+allowBuilds:
+  agent-browser: false
+  esbuild: true
+  unrs-resolver: true
+overrides:
+  rollup: npm:@rollup/wasm-node@4.63.6
+  esbuild: npm:esbuild-wasm@0.28.2
