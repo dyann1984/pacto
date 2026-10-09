@@ -9,6 +9,7 @@ export default async function PactoLayout({
   children: React.ReactNode;
 }) {
   const { user } = await requireSession();
+  const isDemoVisitor = Boolean(user.is_anonymous);
   return (
     <div className="workspace">
       <aside className="sidebar">
@@ -30,10 +31,19 @@ export default async function PactoLayout({
         </div>
       </aside>
       <div className="workspace-main">
+        {isDemoVisitor && (
+          <div className="notice notice-info demo-banner" role="status">
+            Estás en <strong>modo DEMO</strong>: sesión anónima, aislada de
+            cualquier usuario real. <Link href="/sign-up">Crea una cuenta</Link>{" "}
+            para conservar tus Pactos.
+          </div>
+        )}
         <header className="workspace-header">
           <span>Acuerdos claros. Resultados reales.</span>
           <div>
-            <span className="user-email">{user.email}</span>
+            <span className="user-email">
+              {isDemoVisitor ? "Visitante DEMO" : user.email}
+            </span>
             <form action={signOut}>
               <button className="text-button">Cerrar sesión</button>
             </form>

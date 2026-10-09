@@ -24,18 +24,20 @@ export default function Landing() {
           </h1>
           <p className="hero-copy">
             Define lo que esperas. Alinea cada entrega. Conserva el control de
-            las decisiones que importan.
+            las decisiones que importan. Comprador y proveedor aceptan la
+            misma versión, y cada decisión queda auditada.
           </p>
           <div className="hero-actions">
-            <Link className="button" href="/pactos/new">
-              Crear un Pacto <span>→</span>
+            <Link className="button" href="/demo">
+              Explorar DEMO <span>→</span>
             </Link>
-            <a className="button button-outline" href="#proceso">
-              Conocer el proceso
-            </a>
+            <Link className="button button-outline" href="/sign-up">
+              Crear mi cuenta
+            </Link>
           </div>
           <p className="fine-print">
-            FOUNDATION · Acuerdos y trazabilidad. IA y pagos: próxima fase.
+            Explora sin registrarte: sesión aislada y temporal, sin datos
+            reales. FOUNDATION · IA y pagos: próxima fase.
           </p>
         </div>
         <div className="brand-panel">

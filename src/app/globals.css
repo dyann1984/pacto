@@ -987,3 +987,13 @@ summary {
   outline: 2px solid var(--gold);
   outline-offset: 1px;
 }
+
+/* Fase 4: modo DEMO público */
+.demo-banner {
+  margin: 20px 28px 0;
+}
+@media (max-width: 720px) {
+  .demo-banner {
+    margin: 16px;
+  }
+}
