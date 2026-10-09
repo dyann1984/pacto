@@ -110,6 +110,16 @@ test("a user outside the pacto cannot open it (404, no leaked data)", async ({ b
   await outsider.close();
 });
 
+test("DEMO users (non-admin) get a 404 on /admin, not the admin overview", async () => {
+  const responseA = await pageA.goto("/admin");
+  expect(responseA?.status()).toBe(404);
+  await expect(pageA.getByText("Resumen operativo")).toHaveCount(0);
+
+  const responseB = await pageB.goto("/admin");
+  expect(responseB?.status()).toBe(404);
+  await expect(pageB.getByText("Resumen operativo")).toHaveCount(0);
+});
+
 test("pacto state survives a full reload from a new session", async ({ browser }) => {
   const fresh = await browser.newContext();
   const page = await fresh.newPage();
