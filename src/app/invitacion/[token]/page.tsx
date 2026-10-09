@@ -10,7 +10,15 @@ export const dynamic = "force-dynamic";
 const money = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" });
 
 type Preview = {
-  status: "OPEN" | "JOINED" | "OWN" | "USED" | "EXPIRED" | "INACTIVE" | "NOT_FOUND";
+  status:
+    | "OPEN"
+    | "JOINED"
+    | "OWN"
+    | "USED"
+    | "EXPIRED"
+    | "INACTIVE"
+    | "EMAIL_MISMATCH"
+    | "NOT_FOUND";
   pacto_id?: string;
   title?: string;
   scope?: string;
@@ -30,6 +38,10 @@ const closedMessages: Record<string, { title: string; text: string }> = {
   INACTIVE: {
     title: "Este Pacto ya no está activo",
     text: "El acuerdo se cerró o se canceló, por lo que ya no admite nuevos participantes.",
+  },
+  EMAIL_MISMATCH: {
+    title: "Esta invitación es para otra cuenta",
+    text: "Quien te invitó la reservó para una dirección de correo concreta. Inicia sesión con esa cuenta y vuelve a abrir el enlace.",
   },
   NOT_FOUND: {
     title: "No encontramos esta invitación",

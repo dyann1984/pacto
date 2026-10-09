@@ -146,9 +146,20 @@ describe.sequential("invitations: secure link instead of a raw user id", () => {
     const restricted = (
       await scalar<{ t: string }>(BUYER, "select public.create_invitation($1,$2) t", [second, "Nombrado@Example.com"])
     ).t;
+    // La vista previa no revela título, alcance ni importe a quien no es el destinatario.
+    const leaked = (
+      await scalar<{ p: Record<string, unknown> }>(INTRUDER, "select public.invitation_preview($1) p", [restricted])
+    ).p;
+    expect(leaked).toEqual({ status: "EMAIL_MISMATCH" });
     await expect(asUser(INTRUDER, "select public.accept_invitation($1)", [restricted])).rejects.toThrow(
       "INVITATION_EMAIL_MISMATCH",
     );
+    // El destinatario legítimo sí ve el acuerdo antes de unirse.
+    const allowed = (
+      await scalar<{ p: { status: string; title: string } }>(NAMED, "select public.invitation_preview($1) p", [restricted])
+    ).p;
+    expect(allowed.status).toBe("OPEN");
+    expect(allowed.title).toBe("Segundo acuerdo");
     expect((await scalar<{ id: string }>(NAMED, "select public.accept_invitation($1) id", [restricted])).id).toBe(second);
   });
 
@@ -195,6 +206,9 @@ describe.sequential("invitations: secure link instead of a raw user id", () => {
     const link = (
       await scalar<{ t: string }>(BUYER, "select public.create_invitation($1,$2) t", [pactoId, "proveedor@example.com"])
     ).t;
+    expect((await scalar<{ p: unknown }>(visitor, "select public.invitation_preview($1) p", [link])).p).toEqual({
+      status: "EMAIL_MISMATCH",
+    });
     await expect(asUser(visitor, "select public.accept_invitation($1)", [link])).rejects.toThrow(
       "INVITATION_EMAIL_MISMATCH",
     );

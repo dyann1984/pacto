@@ -85,6 +85,11 @@ begin
     when v.expires_at<now() then 'EXPIRED'
     when v_pacto.status<>'ACTIVE' then 'INACTIVE'
     when exists(select 1 from public.participants where pacto_id=v.pacto_id and user_id=auth.uid()) then 'OWN'
+    -- La restricción por correo se comprueba ANTES de revelar nada del acuerdo:
+    -- un enlace nominal filtrado no muestra título, alcance ni importe a terceros.
+    when v.invitee_email is not null
+         and lower(coalesce((select email from auth.users where id=auth.uid()), '')) <> v.invitee_email
+      then 'EMAIL_MISMATCH'
     else 'OPEN' end;
   if v_status not in ('OPEN', 'JOINED', 'OWN') then return jsonb_build_object('status', v_status); end if;
   select * into v_agreement from public.agreements where pacto_id=v.pacto_id order by version desc limit 1;
