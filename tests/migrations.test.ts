@@ -6,7 +6,8 @@ const FOUNDATION = "supabase/migrations/202610020001_foundation.sql";
 const CLOSURE = "supabase/migrations/202610080001_closure_cancellation_ai.sql";
 const ROLES = "supabase/migrations/202610090001_roles_admin.sql";
 const DEMO = "supabase/migrations/202610100001_demo_example.sql";
-const PREFLIGHT = "supabase/preflight.sql";
+const INVITATIONS = "supabase/migrations/202610110001_invitations.sql";
+const PREFLIGHT ="supabase/preflight.sql";
 
 const databases: PGlite[] = [];
 
@@ -58,7 +59,37 @@ describe("migration sequencing and safety", () => {
 
     await db.exec(await readFile(DEMO, "utf8"));
     const afterDemo = await preflight(db);
-    expect(Object.values(afterDemo).every((ok) => ok === true)).toBe(true);
+    expect(afterDemo["demo: rpc is_demo_pacto"]).toBe(true);
+    expect(afterDemo["invitaciones: tabla invitations"]).toBe(false);
+
+    await db.exec(await readFile(INVITATIONS, "utf8"));
+    const afterInvitations = await preflight(db);
+    expect(Object.values(afterInvitations).every((ok) => ok === true)).toBe(true);
+  });
+
+  it("refuses to run the invitations migration before demo-example, and a re-run aborts", async () => {
+    const db = await freshDatabase();
+    await db.exec(await readFile(FOUNDATION, "utf8"));
+    await db.exec(await readFile(CLOSURE, "utf8"));
+    await db.exec(await readFile(ROLES, "utf8"));
+    await expect(db.exec(await readFile(INVITATIONS, "utf8"))).rejects.toThrow("PREREQUISITE_MISSING");
+    await db.exec("rollback");
+    expect((await preflight(db))["invitaciones: tabla invitations"]).toBe(false);
+    await db.exec(await readFile(DEMO, "utf8"));
+    await db.exec(await readFile(INVITATIONS, "utf8"));
+    await expect(db.exec(await readFile(INVITATIONS, "utf8"))).rejects.toThrow("MIGRATION_ALREADY_APPLIED");
+    await db.exec("rollback");
+    expect((await preflight(db))["invitaciones: rpc accept_invitation"]).toBe(true);
+  });
+
+  it("the invitations migration adds no write grant for anon or authenticated", async () => {
+    const db = await freshDatabase();
+    for (const file of [FOUNDATION, CLOSURE, ROLES, DEMO, INVITATIONS]) await db.exec(await readFile(file, "utf8"));
+    const { rows } = await db.query<{ privilege_type: string; grantee: string }>(
+      "select privilege_type, grantee from information_schema.role_column_grants where table_schema='public' and table_name='invitations' and grantee in ('anon','authenticated')",
+    );
+    expect(rows.filter((r) => r.privilege_type !== "SELECT")).toEqual([]);
+    expect(rows.some((r) => r.grantee === "anon")).toBe(false);
   });
 
   it("foundation is also guarded: a re-run aborts and leaves data untouched", async () => {
@@ -123,6 +154,7 @@ describe("migration sequencing and safety", () => {
       "MIGRATION_ALREADY_APPLIED",
     );
     await db.exec("rollback");
+    await db.exec(await readFile(INVITATIONS, "utf8"));
     const state = await preflight(db);
     expect(Object.values(state).every((ok) => ok === true)).toBe(true);
   });

@@ -19,7 +19,12 @@ export type AnalysisOutcome =
       result: AgreementAnalysis;
     };
 
-type FetchLike = (url: string, init: RequestInit) => Promise<Response>;
+// Permite a la interfaz explicar que la IA no está activa en vez de ofrecer un botón que fallaría.
+export function isAnalysisConfigured() {
+  return Boolean(process.env.ANTHROPIC_API_KEY);
+}
+
+type FetchLike =(url: string, init: RequestInit) => Promise<Response>;
 
 // Llama al proveedor real. Sin ANTHROPIC_API_KEY no hay resultado simulado: se informa NOT_CONFIGURED.
 // Los errores no incluyen el cuerpo de respuesta ni la clave, para no registrar secretos.

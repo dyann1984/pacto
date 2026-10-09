@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { requireSession } from "@/lib/session";
+import { pactoStatusLabels, type PactoStatus } from "@/domain/journey";
 export default async function Pactos() {
   const { db } = await requireSession();
   const { data, error } = await db
     .from("pactos")
-    .select("id,title,environment,created_at")
+    .select("id,title,status,created_at")
     .order("created_at", { ascending: false });
   if (error) throw new Error("No se pudo consultar tus Pactos.");
   return (
@@ -27,7 +28,9 @@ export default async function Pactos() {
               href={`/pactos/${p.id}`}
               key={p.id}
             >
-              <span className="badge">{p.environment}</span>
+              <span className="badge">
+                {pactoStatusLabels[p.status as PactoStatus] ?? p.status}
+              </span>
               <h2>{p.title}</h2>
               <p>
                 Creado{" "}
@@ -35,7 +38,7 @@ export default async function Pactos() {
                   timeZone: "America/Mexico_City",
                 })}
               </p>
-              <span className="card-link">Abrir Command Center →</span>
+              <span className="card-link">Abrir acuerdo →</span>
             </Link>
           ))}
         </div>

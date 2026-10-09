@@ -52,8 +52,8 @@ export default async function SignUp({
         <p>Recibirás un correo para confirmar tu dirección.</p>
         {!configured ? (
           <div className="notice" role="status">
-            <strong>Configuración pendiente</strong>
-            <p>Conecta Supabase para habilitar el registro.</p>
+            <strong>Registro no disponible por ahora</strong>
+            <p>Inténtalo de nuevo en unos minutos.</p>
           </div>
         ) : message ? (
           <div

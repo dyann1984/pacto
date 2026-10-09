@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { requireSession } from "@/lib/session";
 import { createPactoSchema } from "@/domain/foundation";
 import { analyzeAgreement } from "@/lib/ai";
+import { requestOrigin } from "@/lib/origin";
 
 // Códigos de negocio que levanta PostgreSQL; cualquier otro error se reporta como "failed".
 const knownActionCodes = [
@@ -18,16 +19,23 @@ const knownActionCodes = [
 function actionErrorCode(message: string | undefined) {
   return knownActionCodes.find((code) => message?.includes(code)) ?? "failed";
 }
+
+// Importe escrito por la persona en pesos ("1500" o "1500.50") a centavos; null si no es válido.
+function amountToCents(value: FormDataEntryValue | null) {
+  const raw = String(value ?? "").trim();
+  if (!/^\d{1,7}(\.\d{1,2})?$/.test(raw)) return null;
+  const [whole, fraction = ""] = raw.split(".");
+  return Number(whole) * 100 + Number(fraction.padEnd(2, "0"));
+}
+
 export async function createPacto(form: FormData) {
   const { db } = await requireSession();
-  const raw = String(form.get("amount") ?? "");
-  if (!/^\d{1,7}(\.\d{1,2})?$/.test(raw))
-    redirect("/pactos/new?status=invalid");
-  const [whole, fraction = ""] = raw.split(".");
+  const totalCents = amountToCents(form.get("amount"));
+  if (totalCents === null) redirect("/pactos/new?status=invalid");
   const input = createPactoSchema.safeParse({
     title: form.get("title"),
     scope: form.get("scope"),
-    totalCents: Number(whole) * 100 + Number(fraction.padEnd(2, "0")),
+    totalCents,
     environment: "DEMO",
   });
   if (!input.success) redirect("/pactos/new?status=invalid");
@@ -52,16 +60,10 @@ export async function updatePacto(form: FormData) {
     .maybeSingle();
   if (membershipError || !participant) throw new Error("NOT_FOUND");
   const operation = z
-    .enum(["seller", "submit", "accept", "revise"])
+    .enum(["submit", "accept", "revise"])
     .parse(form.get("operation"));
   let result;
-  if (operation === "seller") {
-    if (participant.role !== "BUYER") throw new Error("NOT_FOUND");
-    result = await db.rpc("add_seller", {
-      p_id: pactoId,
-      p_user_id: z.uuid().parse(form.get("sellerId")),
-    });
-  } else {
+  {
     const agreementId = z.uuid().parse(form.get("agreementId"));
     const { data: agreement } = await db
       .from("agreements")
@@ -77,16 +79,17 @@ export async function updatePacto(form: FormData) {
         .min(10)
         .max(5000)
         .parse(form.get("scope"));
-      const total = z.coerce
+      const total = z
         .number()
         .int()
         .min(100)
         .max(100000000)
-        .parse(form.get("totalCents"));
+        .safeParse(amountToCents(form.get("amount")));
+      if (!total.success) redirect(`/pactos/${pactoId}?status=INVALID_AMOUNT`);
       result = await db.rpc("revise_agreement", {
         a_id: agreementId,
         p_scope: scope,
-        p_total_cents: total,
+        p_total_cents: total.data,
       });
     } else
       result = await db.rpc(
@@ -127,6 +130,77 @@ export async function cancelPacto(form: FormData) {
     redirect(`/pactos/${pactoId}?status=${actionErrorCode(error.message)}`);
   revalidatePath(`/pactos/${pactoId}`);
   redirect(`/pactos/${pactoId}?status=cancelled`);
+}
+
+export type InvitationState =
+  | { status: "idle" }
+  | { status: "ok"; link: string; email: string | null }
+  | { status: "error"; message: string };
+
+const invitationErrors: Record<string, string> = {
+  SELLER_ALREADY_JOINED: "Tu proveedor ya se unió a este Pacto.",
+  PACTO_NOT_ACTIVE: "Este Pacto ya no está activo.",
+  INVALID_INPUT: "Revisa el correo electrónico del proveedor.",
+};
+
+// Enlace de un solo uso para que el proveedor se una. El token solo existe en esta
+// respuesta: no viaja en la URL de la página del comprador ni queda en registros.
+export async function createInvitation(
+  _previous: InvitationState,
+  form: FormData,
+): Promise<InvitationState> {
+  const { db } = await requireSession();
+  const pactoId = z.uuid().safeParse(form.get("pactoId"));
+  if (!pactoId.success) return { status: "error", message: "No se encontró el Pacto." };
+  const email = z
+    .union([z.literal(""), z.email().max(254)])
+    .safeParse(String(form.get("email") ?? "").trim());
+  if (!email.success)
+    return { status: "error", message: invitationErrors.INVALID_INPUT };
+  const { data, error } = await db.rpc("create_invitation", {
+    p_id: pactoId.data,
+    p_email: email.data || null,
+  });
+  if (error || typeof data !== "string") {
+    const code = Object.keys(invitationErrors).find((c) => error?.message?.includes(c));
+    return {
+      status: "error",
+      message: code
+        ? invitationErrors[code]
+        : "No se pudo generar la invitación. Intenta de nuevo en unos minutos.",
+    };
+  }
+  revalidatePath(`/pactos/${pactoId.data}`);
+  return {
+    status: "ok",
+    link: `${await requestOrigin()}/invitacion/${data}`,
+    email: email.data || null,
+  };
+}
+
+export async function acceptInvitation(form: FormData) {
+  const token = z
+    .string()
+    .regex(/^[0-9a-f]{64}$/)
+    .safeParse(form.get("token"));
+  if (!token.success) redirect("/pactos");
+  const { db } = await requireSession();
+  const { data, error } = await db.rpc("accept_invitation", { p_token: token.data });
+  if (error) {
+    const code =
+      [
+        "INVITATION_USED",
+        "INVITATION_EXPIRED",
+        "INVITATION_EMAIL_MISMATCH",
+        "DISTINCT_PARTIES_REQUIRED",
+        "SELLER_ALREADY_JOINED",
+        "PACTO_NOT_ACTIVE",
+        "INVALID_STATE",
+      ].find((c) => error.message?.includes(c)) ?? "failed";
+    redirect(`/invitacion/${token.data}?error=${code}`);
+  }
+  revalidatePath(`/pactos/${data}`);
+  redirect(`/pactos/${data}?status=joined`);
 }
 
 // Asistencia de IA: solo lectura del acuerdo. Nunca cambia estados ni importes.

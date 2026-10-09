@@ -37,8 +37,8 @@ export default async function ForgotPassword({
         <p>Escribe tu correo y te enviaremos un enlace para elegir una contraseña nueva.</p>
         {!configured ? (
           <div className="notice" role="status">
-            <strong>Configuración pendiente</strong>
-            <p>Conecta Supabase para habilitar la recuperación.</p>
+            <strong>Recuperación no disponible por ahora</strong>
+            <p>Inténtalo de nuevo en unos minutos.</p>
           </div>
         ) : status === "sent" ? (
           <div className="notice notice-info" role="status">
