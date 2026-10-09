@@ -1,7 +1,10 @@
 import Link from "next/link";
 import { Brand } from "@/components/brand";
+import { PasswordField } from "@/components/password-field";
 import { supabase, isConfigured } from "@/lib/supabase";
 import { updatePassword } from "./actions";
+
+export const dynamic = "force-dynamic";
 
 const messages: Record<string, string> = {
   mismatch: "Las contraseñas no coinciden.",
@@ -63,28 +66,20 @@ export default async function ResetPassword({
         ) : null}
         {hasSession && (
           <form action={updatePassword}>
-            <label>
-              Nueva contraseña
-              <input
-                name="password"
-                type="password"
-                autoComplete="new-password"
-                minLength={8}
-                maxLength={128}
-                required
-              />
-            </label>
-            <label>
-              Confirmar contraseña
-              <input
-                name="passwordConfirm"
-                type="password"
-                autoComplete="new-password"
-                minLength={8}
-                maxLength={128}
-                required
-              />
-            </label>
+            <PasswordField
+              name="password"
+              label="Nueva contraseña"
+              autoComplete="new-password"
+              minLength={8}
+              maxLength={128}
+            />
+            <PasswordField
+              name="passwordConfirm"
+              label="Confirmar contraseña"
+              autoComplete="new-password"
+              minLength={8}
+              maxLength={128}
+            />
             <button className="button">Guardar contraseña →</button>
           </form>
         )}
