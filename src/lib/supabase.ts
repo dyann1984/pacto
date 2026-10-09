@@ -19,6 +19,17 @@ const observedFetch: typeof fetch = async (input, init) => {
     return response;
   } catch (error) {
     const cause = (error as { cause?: { code?: string; message?: string } }).cause;
+    // Cabecera con caracteres no ASCII: se describe cuál y dónde. Se omite
+    // Authorization; apikey es la clave publicable, ya pública en el bundle.
+    if (/ByteString/.test((error as Error).message) && init?.headers) {
+      const entries = Object.entries(init.headers as Record<string, string>);
+      for (const [name, value] of entries) {
+        if (/authorization/i.test(name)) continue;
+        const bad = [...value].flatMap((c, i) => (c.charCodeAt(0) > 126 ? [`${i}:U+${c.charCodeAt(0).toString(16)}`] : []));
+        if (bad.length)
+          console.error(`[supabase] header ${name} len=${value.length} non-ascii=${bad.join(",")} value=${JSON.stringify(value)}`);
+      }
+    }
     console.error(
       `[supabase] ${init?.method ?? "GET"} ${target.host}${target.pathname} -> network error: ` +
         `${(error as Error).name}: ${(error as Error).message}` +
