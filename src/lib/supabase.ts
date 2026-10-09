@@ -19,15 +19,12 @@ const observedFetch: typeof fetch = async (input, init) => {
     return response;
   } catch (error) {
     const cause = (error as { cause?: { code?: string; message?: string } }).cause;
-    // Cabecera con caracteres no ASCII: se describe cuál y dónde. Se omite
-    // Authorization; apikey es la clave publicable, ya pública en el bundle.
+    // Cabecera que no se puede codificar (p. ej. una variable de entorno con texto
+    // pegado por error): se indica cuál y su longitud, nunca su valor.
     if (/ByteString/.test((error as Error).message) && init?.headers) {
-      const entries = Object.entries(init.headers as Record<string, string>);
-      for (const [name, value] of entries) {
-        if (/authorization/i.test(name)) continue;
-        const bad = [...value].flatMap((c, i) => (c.charCodeAt(0) > 126 ? [`${i}:U+${c.charCodeAt(0).toString(16)}`] : []));
-        if (bad.length)
-          console.error(`[supabase] header ${name} len=${value.length} non-ascii=${bad.join(",")} value=${JSON.stringify(value)}`);
+      for (const [name, value] of Object.entries(init.headers as Record<string, string>)) {
+        if ([...value].some((c) => c.charCodeAt(0) > 255))
+          console.error(`[supabase] cabecera ${name} inválida (len=${value.length}): revisa la variable de entorno que la origina`);
       }
     }
     console.error(
