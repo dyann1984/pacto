@@ -151,6 +151,10 @@ export default async function Center({
   const isBuyer = participants?.some(
     (p) => p.user_id === userId && p.role === "BUYER",
   );
+  // Un Pacto de ejemplo público es visible para cualquiera, pero solo sus
+  // participantes reales pueden actuar sobre él (el servidor ya lo exige;
+  // esto evita además mostrar un botón que solo fallaría al usarse).
+  const isParticipant = participants?.some((p) => p.user_id === userId) ?? false;
   const hasPendingProposal = agreements.some(
     (a) => a.state === "DRAFT" || a.state === "REVIEW",
   );
@@ -237,7 +241,7 @@ export default async function Center({
             {acceptances?.length ?? 0}/2 aceptaciones de esta versión. Aceptar
             el acuerdo no ejecuta pagos.
           </p>
-          {isActive && current.state === "DRAFT" && (
+          {isActive && isParticipant && current.state === "DRAFT" && (
             <form action={updatePacto}>
               {fields("submit")}
               <button className="button" disabled={participants?.length !== 2}>
@@ -246,6 +250,7 @@ export default async function Center({
             </form>
           )}
           {isActive &&
+            isParticipant &&
             current.state === "REVIEW" &&
             !acceptances?.some((a) => a.user_id === userId) && (
               <form action={updatePacto}>
@@ -255,7 +260,7 @@ export default async function Center({
                 </button>
               </form>
             )}
-          {isActive && (
+          {isActive && isParticipant && (
             <details className="revision">
               <summary>
                 {current.state === "ACCEPTED"
@@ -321,7 +326,7 @@ export default async function Center({
                   {c.note ? `: “${c.note}”` : "."}
                 </p>
               ))}
-              {iConfirmedClosure ? (
+              {!isParticipant ? null : iConfirmedClosure ? (
                 <p className="fine-print">
                   Esperando la confirmación de la otra parte.
                 </p>
@@ -337,7 +342,7 @@ export default async function Center({
               )}
             </>
           )}
-          {isActive && (
+          {isActive && isParticipant && (
             <details className="revision danger-zone">
               <summary>Cancelar Pacto</summary>
               <form action={cancelPacto}>
@@ -380,10 +385,12 @@ export default async function Center({
             inconsistencias. No modifica el acuerdo ni toma decisiones
             contractuales.
           </p>
-          <form action={runAgreementAnalysis}>
-            {fields("analyze")}
-            <button className="button">Analizar versión {current.version}</button>
-          </form>
+          {isParticipant && (
+            <form action={runAgreementAnalysis}>
+              {fields("analyze")}
+              <button className="button">Analizar versión {current.version}</button>
+            </form>
+          )}
           {analysis && latestAnalysis ? (
             <div className="analysis">
               <p className="fine-print">

@@ -8,11 +8,6 @@ export async function getPacto(id: string) {
     .select("pacto_id,user_id,role")
     .eq("pacto_id", id);
   if (participantError) throw new Error("No se pudo consultar la pertenencia.");
-  try {
-    requireParticipant(user.id, id, participants ?? []);
-  } catch {
-    return null;
-  }
   const { data: pacto, error } = await db
     .from("pactos")
     .select("*")
@@ -20,6 +15,17 @@ export async function getPacto(id: string) {
     .maybeSingle();
   if (error) throw new Error("No se pudo consultar el Pacto.");
   if (!pacto) return null;
+  // Excepción deliberada y de solo lectura: un único Pacto marcado como ejemplo
+  // público es visible para cualquier visitante autenticado (incluido modo DEMO),
+  // sin ser participante. Respaldada por RLS (is_demo_pacto), no solo por esta
+  // comprobación de aplicación.
+  if (!pacto.is_demo_example) {
+    try {
+      requireParticipant(user.id, id, participants ?? []);
+    } catch {
+      return null;
+    }
+  }
   const results = await Promise.all([
     db
       .from("agreements")

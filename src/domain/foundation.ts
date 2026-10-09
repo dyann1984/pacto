@@ -17,6 +17,7 @@ export interface Pacto {
   title: string;
   environment: Environment;
   created_by: string;
+  is_demo_example?: boolean;
 }
 export interface Participant {
   pacto_id: string;
