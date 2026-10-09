@@ -1,7 +1,7 @@
 "use server";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { supabase, isConfigured } from "@/lib/supabase";
+import { supabase, isConfigured, logAuthError } from "@/lib/supabase";
 import { requestOrigin } from "@/lib/origin";
 import { emailOnlySchema } from "@/domain/account";
 export async function signIn(form: FormData) {
@@ -21,6 +21,7 @@ export async function signIn(form: FormData) {
     if (error.status === 429 || error.code === "over_request_rate_limit")
       redirect("/sign-in?status=rate-limited");
     if (error.code === "invalid_credentials") redirect("/sign-in?status=invalid");
+    logAuthError("signInWithPassword", error);
     redirect("/sign-in?status=failed");
   }
   redirect("/pactos");

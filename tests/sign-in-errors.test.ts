@@ -6,6 +6,7 @@ const mocked = vi.hoisted(() => ({
 }));
 vi.mock("@/lib/supabase", () => ({
   isConfigured: () => mocked.configured,
+  logAuthError: () => {},
   supabase: async () => ({
     auth: {
       signInWithPassword: async () => ({ error: mocked.error }),
