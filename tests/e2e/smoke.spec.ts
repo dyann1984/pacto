@@ -111,6 +111,15 @@ test("sign-up creates a real Supabase account and asks for email confirmation", 
   await page.locator('input[name="password"]').fill("contraseña-e2e-1");
   await page.locator('input[name="passwordConfirm"]').fill("contraseña-e2e-1");
   await page.getByRole("button", { name: "Crear mi cuenta" }).click();
+  await page.waitForURL(/\/(sign-in|sign-up)\?status=/);
+
+  // El correo integrado de Supabase está limitado por hora. Sin cupo no se puede
+  // comprobar el registro real, pero eso no es un fallo del producto: se
+  // distingue en vez de teñir la suite de rojo. Que ese caso se presente bien es
+  // lo que comprueba la prueba siguiente, que no depende del entorno.
+  if (/status=email-rate-limit/.test(page.url()))
+    test.skip(true, "Cupo horario de correo de Supabase agotado: el registro real no se puede verificar ahora.");
+
   await expect(page).toHaveURL(/\/sign-in\?status=check-email$/);
   await expect(page.locator(".notice-info")).toContainText("confirma tu cuenta");
   console.log(`E2E_SIGNUP_EMAIL=${email}`);

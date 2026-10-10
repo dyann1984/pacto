@@ -4,43 +4,47 @@
 https://pacto-pearl.vercel.app, vinculado al proyecto Vercel `pacto`
 (`.vercel/project.json`).
 
-## ⚠️ El despliegue público está desactualizado
+## Estado del despliegue: al día
 
-Comprobado con peticiones reales el 10 de octubre de 2026:
+Actualizado el **10 de octubre de 2026**. La rama `production` apunta a
+`9041273`, que ya incluye los hitos y pagos (`6dfdd18`), el Modo Juez
+(`2c406ab`) y las correcciones posteriores.
 
-| Ruta | Producción | Local (`2c406ab`) |
+Comprobado con peticiones reales contra `https://pacto-pearl.vercel.app`
+después de desplegar:
+
+| Ruta | Antes | Ahora |
 |---|---|---|
 | `/` | 200 | 200 |
 | `/sign-in` | 200 | 200 |
 | `/demo` | 200 | 200 |
-| **`/juez`** | **404** | 200 |
+| **`/juez`** | **404** | **200** |
+| `/invitacion/<token>` | 200 | 200 |
+| `/pactos/<id>/pago` | 404 | 307 → `/sign-in` (sin sesión) |
+| `/pactos`, `/admin` | 307 | 307 → `/sign-in` (sin sesión) |
 
-La rama `production` apunta a `cbe8963` (merge de `dd94565`), **anterior** a:
-
-- `6dfdd18` — hitos, evidencia de entrega y pagos con PayPal Sandbox autorizados por una persona.
-- `2c406ab` — **Modo Juez**, la vía de evaluación que documentan `DEMO_GUIDE.md`,
-  `en/JUDGE_INSTRUCTIONS.md` y el guion del vídeo.
-
-**Consecuencia:** un juez que siga la guía de la entrega aterriza en una página
-que no existe, y no puede ver ni los pagos ni el análisis de IA. Es el bloqueo
-más grave para el concurso y se resuelve desplegando `feat/paypal-ai-demo`.
+Y el recorrido completo del Modo Juez —crear, invitar, unirse, aceptar por
+ambas partes, presentar evidencia, autorizar y cerrar, con las comprobaciones
+de seguridad— ejecutado **contra producción** con Playwright: pasa.
 
 ## Procedimiento para actualizar producción
 
-Requiere intervención de la propietaria: en este equipo no están instalados
-`gh`, `vercel` ni `supabase`, y publicar es una acción hacia fuera.
+Vercel está conectado a GitHub y despliega solo al recibir un push en la rama
+`production`. No hace falta ninguna CLI.
 
-### Opción A — por rama (la que ya usa el proyecto)
+### Opción A — por rama (la que usa el proyecto)
 
 ```bash
 git checkout production
-git merge --no-ff feat/paypal-ai-demo -m "merge: publish milestones, PayPal Sandbox payments and Judge Mode"
+git pull --ff-only origin production
+git merge --no-ff feat/paypal-ai-demo
 git push origin production
 ```
 
-Vercel construye y promueve automáticamente la rama de producción.
+El despliegue tarda entre uno y dos minutos. Para confirmarlo sin abrir el
+panel, basta con que una ruta nueva deje de dar 404.
 
-### Opción B — Preview primero (más prudente)
+### Opción B — Preview primero (más prudente para un cambio grande)
 
 ```bash
 git push origin feat/paypal-ai-demo
@@ -52,16 +56,25 @@ Vercel genera una URL de Preview. Verifícala antes de promover:
 PACTO_E2E_BASE_URL=https://<url-preview> pnpm exec playwright test
 ```
 
-Si la suite pasa contra el Preview, promuévelo desde el panel de Vercel
+Si la suite pasa, promuévelo desde el panel de Vercel
 (*Deployments → … → Promote to Production*) o ejecuta la opción A.
+
+### Antes de cada push a producción
+
+Verificar sobre el árbol ya fusionado, no sobre la rama de trabajo:
+
+```bash
+pnpm test && pnpm build && pnpm lint && pnpm check:secrets
+```
 
 ## Lista de verificación previa
 
 - [x] `pnpm build` compila con TypeScript estricto
 - [x] `pnpm lint` sin errores
 - [x] `pnpm test` — 152/152
-- [x] `pnpm exec playwright test` — 25 pasan, 0 fallan, 10 omitidas (9 por falta de credenciales DEMO, 1 son las capturas bajo demanda)
+- [x] `pnpm exec playwright test` — 26 pasan, 0 fallan, 10 omitidas (9 por falta de credenciales DEMO, 1 son las capturas bajo demanda)
 - [x] `pnpm check:secrets` — ningún secreto en el cliente
+- [x] Recorrido completo del Modo Juez ejecutado **contra producción**
 - [ ] `pnpm check:integrations` — 4 credenciales pendientes (ver `credentials-setup.md`)
 
 ## Variables de entorno en Vercel

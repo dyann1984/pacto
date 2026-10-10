@@ -1,4 +1,4 @@
-import { test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
 // Captura de pantallas para la entrega. Se ejecuta a mano, no forma parte de la
 // suite habitual: crea un escenario DEMO nuevo igual que haría un juez.
@@ -44,7 +44,9 @@ test("capturas del Modo Juez", async ({ page }) => {
   const board = page.locator("section.card").filter({ hasText: "Entregas y pagos" });
   await board.screenshot({ path: "test-results/juez-5-hitos-y-pagos.png" });
   await page.getByRole("button", { name: "Autorizar el pago de este hito" }).click();
-  await page.waitForTimeout(1000);
+  // Esperar al estado, no a un reloj: contra producción un segundo no alcanzaba
+  // y la captura salía con el botón en "Procesando…", que no es lo que ilustra.
+  await expect(board.getByText("Autorizado para pago")).toBeVisible();
   await board.screenshot({ path: "test-results/juez-6-autorizado-paypal.png" });
 
   await page.setViewportSize({ width: 375, height: 812 });

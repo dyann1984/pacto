@@ -221,5 +221,6 @@ $env:PACTO_E2E_BASE_URL="https://…"; corepack pnpm@11.28.5 exec playwright tes
 - El registro público por correo depende del servicio de correo integrado de
   Supabase, limitado a 2 correos por hora. Para abrirlo al público haría falta un
   SMTP propio (`docs/pending-public-launch.md`).
-- **El despliegue público está desactualizado** respecto a esta rama: ver
-  `docs/deployment.md`.
+- El registro público por correo también depende del cupo horario del correo de
+  Supabase. Al agotarse, la pantalla lo explica y remite a la DEMO, que no
+  necesita correo, pero no se puede crear una cuenta hasta la hora siguiente.
