@@ -15,3 +15,15 @@ export function isRateLimited(error: AuthErrorLike): boolean {
   if (!error) return false;
   return error.status === 429 || error.code === "over_request_rate_limit";
 }
+
+/**
+ * El servicio de correo integrado de Supabase está limitado a unos pocos envíos
+ * por hora (ver docs/pending-public-launch.md). Al agotarse, registrarse
+ * devuelve 429 / over_email_send_rate_limit. Presentarlo como "no se pudo
+ * completar el registro" hace pensar que PACTO está roto, cuando basta esperar
+ * o entrar por la DEMO, que no necesita correo.
+ */
+export function isEmailRateLimited(error: AuthErrorLike): boolean {
+  if (!error) return false;
+  return error.code === "over_email_send_rate_limit";
+}
