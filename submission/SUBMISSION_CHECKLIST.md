@@ -39,7 +39,7 @@ nuevo.*
 |---|---|---|
 | 1 | Proyecto que cumpla los requisitos anteriores | ✅ |
 | 2 | Descripción de texto con funciones y funcionalidad | ✅ `en/PROJECT_DESCRIPTION.md` |
-| 3 | Demo funcional: URL alojada **o** instrucciones completas en el repositorio. Las maquetas no cuentan | ⚠️ URL alojada **desactualizada** (ver abajo) |
+| 3 | Demo funcional: URL alojada **o** instrucciones completas en el repositorio. Las maquetas no cuentan | ✅ https://pacto-pearl.vercel.app, al día y verificada |
 | 4 | Repositorio **público** en GitHub/GitLab/Bitbucket, con **archivo de licencia de código abierto** detectable y visible en la sección *About* | ❌ **Repositorio privado y sin licencia** |
 | 5 | Vídeo de **menos de 3 minutos**, público en **YouTube** | ❌ **Sin grabar** · guion en `VIDEO_SCRIPT.md` |
 | 6 | Todo el material en **inglés** (o con traducción al inglés) | ⚠️ Parcial: ver `submission/en/` |
@@ -75,29 +75,29 @@ nuevo.*
 Ordenados por impacto en la puntuación. Los cuatro primeros requieren una
 decisión o una credencial de la propietaria; ninguno requiere tocar el código.
 
-1. **El despliegue público está desactualizado.** `https://pacto-pearl.vercel.app`
-   sirve el commit `dd94565`, anterior a los hitos, a los pagos con PayPal y al
-   Modo Juez. **`/juez` responde 404 en producción.** Un juez que siga
-   `DEMO_GUIDE.md` se topa con una página inexistente. Hay que desplegar
-   `feat/paypal-ai-demo` (`2c406ab`).
-2. **Repositorio privado y sin licencia.** La regla 4 lo exige público y con
-   licencia de código abierto visible. Es motivo de descalificación.
+1. ~~El despliegue público está desactualizado.~~ **Resuelto el 10 oct 2026.**
+   `production` apunta a `9041273`; `/juez` responde 200 y el recorrido completo
+   se verificó con Playwright contra producción.
+2. **Repositorio privado y sin licencia visible.** La licencia MIT ya está en el
+   repositorio (`LICENSE`); falta **hacerlo público**. La regla 4 lo exige y es
+   motivo de descalificación. Requiere la autorización de la propietaria.
 3. **Sin clave de Anthropic.** El panel de IA muestra «no activado» — en el
    criterio que más pesa.
 4. **Sin credenciales de PayPal Sandbox.** El pago muestra «no activado», en ese
    mismo criterio.
-5. **Vídeo sin grabar.** Guion en `VIDEO_SCRIPT.md`, pendiente de actualizar para
-   usar el Modo Juez, que es la forma más clara de enseñar el ciclo completo.
-6. **Capturas de pantalla.** Siete capturas reales del recorrido en
-   `test-results/juez-*.png`, generadas por `tests/e2e/shots.spec.ts`. Faltan las
-   de IA y PayPal, que no deben recrearse ni simularse.
+5. **Vídeo sin grabar.** Guion actualizado en `VIDEO_SCRIPT.md`, ya reescrito
+   alrededor del Modo Juez y con los tiempos ajustados a menos de 3 minutos.
+6. **Capturas de pantalla.** Siete capturas reales del recorrido se generan con
+   `PACTO_E2E_SHOTS=1 pnpm exec playwright test tests/e2e/shots.spec.ts`. Faltan
+   las de IA y PayPal, que no deben recrearse ni simularse.
 
 ## Estado de la verificación técnica (10 oct 2026)
 
 | Comprobación | Resultado |
 |---|---|
-| `pnpm test` | **156/156** (unitarias, autorización y RLS contra PostgreSQL real) |
-| `pnpm exec playwright test` | **25 pasan, 0 fallan, 10 omitidas** (9 necesitan credenciales DEMO; 1 son las capturas, bajo demanda) |
+| `pnpm test` | **159/159** (unitarias, autorización y RLS contra PostgreSQL real) |
+| `pnpm exec playwright test` | **26 pasan, 0 fallan, 10 omitidas** (9 necesitan credenciales DEMO; 1 son las capturas, bajo demanda) |
+| Recorrido completo **contra producción** | ✅ Modo Juez entero con Playwright sobre `pacto-pearl.vercel.app` |
 | `pnpm build` | ✅ compila, con TypeScript en modo estricto |
 | `pnpm lint` | ✅ sin errores |
 | `pnpm check:secrets` | ✅ ningún secreto en el bundle de cliente ni en el repositorio |
@@ -114,12 +114,18 @@ decisión o una credencial de la propietaria; ninguno requiere tocar el código.
 
 ## Decisiones que requieren a la propietaria
 
-1. **Hacer público el repositorio** `dyann1984/pacto`. Lo exige la regla 4.
-2. **Licencia.** Añadir un `LICENSE` de código abierto (MIT es lo habitual) con el
-   titular del copyright.
-3. **Desplegar a producción** la rama con PayPal y Modo Juez.
-4. **Clave de Anthropic.** Con `claude-haiku-5-5` el coste ronda los 2 USD por mil
-   análisis.
-5. **Credenciales de PayPal Sandbox** y el `PAYPAL_WEBHOOK_ID` del webhook
-   apuntando a `https://<dominio>/api/paypal/webhook`.
-6. **Grabar y publicar el vídeo** en YouTube, en visibilidad pública.
+1. **Hacer público el repositorio** `dyann1984/pacto`. Lo exige la regla 4. El
+   `LICENSE` (MIT) ya está dentro; falta el cambio de visibilidad, que expone
+   todo el historial y por eso no se hace sin autorización.
+   → GitHub → *Settings* → *General* → abajo del todo, *Danger Zone* →
+   *Change repository visibility* → **Make public**.
+2. **Revisar el titular del copyright** en `LICENSE`: dice `dyann1984`. Si
+   prefieres tu nombre legal, cámbialo antes de hacerlo público.
+3. **Clave de Anthropic.** Con `claude-haiku-5-5` el coste ronda los 2 USD por mil
+   análisis. Pasos en `../docs/credentials-setup.md`.
+4. **Credenciales de PayPal Sandbox** y el `PAYPAL_WEBHOOK_ID` del webhook
+   apuntando a `https://pacto-pearl.vercel.app/api/paypal/webhook`.
+5. **Grabar y publicar el vídeo** en YouTube, en visibilidad pública.
+6. **Enviar la inscripción** en Devpost. No se hará sin tu confirmación expresa.
+
+Ya hecho: el despliegue a producción está al día y verificado.
