@@ -4,6 +4,9 @@ import { getPacto } from "@/application/pactos";
 import { requireSession } from "@/lib/session";
 import { isAnalysisConfigured } from "@/lib/ai";
 import { InviteSeller } from "@/components/invite-seller";
+import { isPayPalConfigured } from "@/lib/paypal";
+import { MilestoneBoard, type MilestoneRow } from "@/components/milestone-board";
+import { JudgeRoleNote } from "@/components/judge-role-note";
 import { SubmitButton } from "@/components/submit-button";
 import {
   agreementStateLabels,
@@ -90,7 +93,31 @@ const aiMessages: Record<string, { tone: "info" | "error"; text: string }> = {
   },
 };
 
+const paymentMessages: Record<string, { tone: "info" | "error"; text: string }> = {
+  evidencia: { tone: "info", text: "Evidencia presentada. El cliente la revisará y decidirá si autoriza el pago." },
+  aprobado: { tone: "info", text: "Hito autorizado. Ya puedes pagarlo con PayPal cuando quieras." },
+  pagado: { tone: "info", text: "Pago registrado en PayPal Sandbox. El comprobante quedó en la actividad." },
+  cancelado: { tone: "info", text: "Cancelaste el pago en PayPal. El hito sigue autorizado y puedes intentarlo de nuevo." },
+  rechazado: { tone: "error", text: "PayPal no completó el pago. No se cobró nada; puedes intentarlo de nuevo." },
+  proveedor: { tone: "error", text: "No se pudo contactar con PayPal. Intenta de nuevo en unos minutos." },
+  "no-configurado": { tone: "info", text: "El pago con PayPal todavía no está activado en esta versión." },
+  EVIDENCE_REQUIRED: { tone: "error", text: "Falta la evidencia del proveedor antes de autorizar el pago." },
+  APPROVAL_REQUIRED: { tone: "error", text: "Tienes que autorizar el hito antes de pagarlo." },
+  AMOUNT_MISMATCH: { tone: "error", text: "El importe no coincide con el del hito. No se creó ningún pago." },
+  PAYMENT_ALREADY_OPEN: { tone: "error", text: "Ya hay un pago en curso para este hito. Revísalo antes de crear otro." },
+  INVALID_TRANSITION: { tone: "error", text: "Este hito ya no admite ese cambio." },
+  INVALID_INPUT: { tone: "error", text: "La evidencia debe tener entre 10 y 2000 caracteres." },
+  INVALID_STATE: { tone: "error", text: "Ambas partes deben aceptar el acuerdo antes de registrar entregas." },
+  PACTO_NOT_ACTIVE: { tone: "error", text: "Este Pacto ya no está activo." },
+  failed: { tone: "error", text: "No se pudo completar la operación de pago. Intenta de nuevo." },
+};
+
 const eventLabels: Record<string, string> = {
+  EVIDENCE_SUBMITTED: "Evidencia de entrega presentada",
+  MILESTONE_APPROVED: "Pago autorizado por el cliente",
+  PAYMENT_ORDER_CREATED: "Orden de pago creada en PayPal",
+  PAYMENT_CAPTURED: "Pago completado en PayPal",
+  PAYMENT_FAILED: "Pago no completado",
   PACTO_CREATED: "Pacto creado",
   PARTICIPANT_ADDED: "Se unió al Pacto",
   INVITATION_CREATED: "Invitación generada",
@@ -131,7 +158,7 @@ export default async function Center({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ status?: string; ai?: string }>;
+  searchParams: Promise<{ status?: string; ai?: string; pago?: string }>;
 }) {
   const { id } = await params;
   if (!z.uuid().safeParse(id).success) notFound();
@@ -139,9 +166,9 @@ export default async function Center({
   if (!detail) notFound();
   const { pacto, participants, agreements, events, userId } = detail;
   const current = agreements[0];
-  const { status, ai } = await searchParams;
+  const { status, ai, pago } = await searchParams;
   const { db } = await requireSession();
-  const [acceptanceResult, closureResult, analysisResult, directoryResult, invitationResult] =
+  const [acceptanceResult, closureResult, analysisResult, directoryResult, boardResult, invitationResult] =
     await Promise.all([
       db
         .from("acceptances")
@@ -161,6 +188,7 @@ export default async function Center({
       // Nombres legibles e invitaciones: si la migración de invitaciones aún no está
       // aplicada, la página sigue funcionando con etiquetas por rol.
       db.rpc("participant_directory", { p_id: id }),
+      db.rpc("milestone_board", { p_id: id }),
       db
         .from("invitations")
         .select("created_at,expires_at")
@@ -194,6 +222,9 @@ export default async function Center({
   );
   const openInvitation = invitationResult.error ? null : invitationResult.data?.[0];
   const invitationsAvailable = !directoryResult.error;
+  // Si la migración de hitos y pagos aún no está aplicada, la página sigue
+  // funcionando sin la sección de entregas.
+  const milestones = (boardResult.error ? [] : (boardResult.data ?? [])) as MilestoneRow[];
 
   const pactoStatus = pacto.status as PactoStatus;
   const isActive = pactoStatus === "ACTIVE";
@@ -225,7 +256,9 @@ export default async function Center({
   const stepIndex = currentStepIndex(journey);
   const message = status ? statusMessages[status] ?? statusMessages.failed : null;
   const aiMessage = ai ? aiMessages[ai] ?? aiMessages.failed : null;
+  const paymentMessage = pago ? paymentMessages[pago] ?? paymentMessages.failed : null;
   const aiReady = isAnalysisConfigured();
+  const paypalReady = isPayPalConfigured();
 
   function fields(operation: string) {
     return (
@@ -254,13 +287,17 @@ export default async function Center({
           </span>
         </div>
       </div>
-      {message && (
-        <div
-          className={message.tone === "error" ? "notice" : "notice notice-info"}
-          role={message.tone === "error" ? "alert" : "status"}
-        >
-          {message.text}
-        </div>
+      {[message, paymentMessage].map(
+        (m, index) =>
+          m && (
+            <div
+              key={index}
+              className={m.tone === "error" ? "notice" : "notice notice-info"}
+              role={m.tone === "error" ? "alert" : "status"}
+            >
+              {m.text}
+            </div>
+          ),
       )}
 
       <ol className="stepper" aria-label="Avance del Pacto">
@@ -291,6 +328,10 @@ export default async function Center({
         <span className="eyebrow">{step.waiting ? "EN ESPERA" : "QUÉ SIGUE"}</span>
         <h2 id="next-step-title">{step.title}</h2>
         <p>{step.body}</p>
+        {/* En Modo Juez, si el paso le toca a la otra parte, se indica el cambio. */}
+        {isActive && step.waiting && myRole && (
+          <JudgeRoleNote role={myRole === "BUYER" ? "SELLER" : "BUYER"} />
+        )}
         {isActive && step.action === "invite" &&
           (invitationsAvailable ? (
             <>
@@ -416,6 +457,15 @@ export default async function Center({
             );
           })}
         </section>
+
+        {milestones.length > 0 && state === "ACCEPTED" && (
+          <MilestoneBoard
+            pactoId={id}
+            rows={milestones}
+            role={myRole}
+            paypalReady={paypalReady}
+          />
+        )}
 
         <section className="card">
           <div className="card-heading">

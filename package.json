@@ -13,7 +13,8 @@
                     "test:rls":  "vitest run tests/rls.test.ts",
                     "test:e2e":  "playwright test",
                     "check:demo-users":  "node --env-file=.env.local scripts/check-demo-users.mjs",
-                    "check:secrets":  "node scripts/check-public-exposure.mjs"
+                    "check:secrets":  "node scripts/check-public-exposure.mjs",
+                    "check:integrations":  "node --env-file=.env.local scripts/check-integrations.mjs"
                 },
     "dependencies":  {
                          "@supabase/ssr":  "^0.7.0",

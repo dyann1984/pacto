@@ -2,14 +2,22 @@ import Link from "next/link";
 import { Brand } from "@/components/brand";
 import { requireSession } from "@/lib/session";
 import { signOut } from "@/app/sign-in/actions";
+import { JudgeBar } from "@/components/judge-bar";
 export const dynamic = "force-dynamic";
 export default async function PactoLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const { user } = await requireSession();
+  const { db, user } = await requireSession();
   const isDemoVisitor = Boolean(user.is_anonymous);
+  // Solo decide si se muestra el enlace. El acceso real lo siguen exigiendo
+  // /admin (sesión + rol, 404 si no) y las políticas RLS: esto no concede nada.
+  // Una sesión DEMO nunca es administradora, así que se evita la consulta.
+  const { data: profile } = isDemoVisitor
+    ? { data: null }
+    : await db.from("profiles").select("role").eq("id", user.id).maybeSingle();
+  const isAdmin = profile?.role === "admin";
   return (
     <div className="workspace">
       <aside className="sidebar">
@@ -20,6 +28,11 @@ export default async function PactoLayout({
         <nav>
           <Link href="/pactos">▦ Mis Pactos</Link>
           <Link href="/pactos/new">＋ Crear Pacto</Link>
+          {isAdmin && (
+            <Link className="nav-admin" href="/admin">
+              ◆ Panel de administración
+            </Link>
+          )}
         </nav>
         <div className="sidebar-foot">
           <span className="badge badge-dark">CÓMO FUNCIONA</span>
@@ -31,6 +44,7 @@ export default async function PactoLayout({
         </div>
       </aside>
       <div className="workspace-main">
+        <JudgeBar />
         {isDemoVisitor && (
           <div className="notice notice-info demo-banner" role="status">
             Estás en <strong>modo DEMO</strong>: una sesión temporal y privada,

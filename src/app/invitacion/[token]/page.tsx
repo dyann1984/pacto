@@ -4,6 +4,7 @@ import { Brand } from "@/components/brand";
 import { isConfigured, supabase } from "@/lib/supabase";
 import { acceptInvitation } from "@/app/pactos/actions";
 import { SubmitButton } from "@/components/submit-button";
+import { JudgeBar } from "@/components/judge-bar";
 
 export const dynamic = "force-dynamic";
 
@@ -83,7 +84,14 @@ function Shell({ children }: { children: React.ReactNode }) {
           <p>Comprador y proveedor aceptan la misma versión, y cada decisión queda registrada.</p>
         </div>
       </aside>
-      <section className="auth-form">{children}</section>
+      <section className="auth-form">
+        {/* Esta pantalla queda fuera del espacio de trabajo, donde vive la barra
+            del Modo Juez. Sin ella el evaluador llega aquí tras cambiar de parte
+            y no tiene forma de saber con qué identidad está abriendo el enlace:
+            las dos son visitantes DEMO anónimos. Fuera del Modo Juez no pinta nada. */}
+        <JudgeBar />
+        {children}
+      </section>
     </main>
   );
 }

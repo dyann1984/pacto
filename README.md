@@ -2,29 +2,73 @@
 
 **AI Commerce. Real Results.**
 
-Convierte tus acuerdos en resultados reales: un Pacto reúne a comprador y proveedor, define alcance e importe, registra cada versión y cada decisión, y permite cerrarlo o cancelarlo con evidencia auditable. Un asistente de IA revisa el texto del acuerdo y señala ambigüedades, obligaciones, fechas, riesgos e inconsistencias, sin decidir por las partes.
+Convierte un acuerdo informal en un recorrido que ambas partes pueden probar: se
+define el alcance, la IA lo revisa antes de que nadie se comprometa, comprador y
+proveedor aceptan la misma versión, el proveedor presenta evidencia de entrega,
+el comprador **autoriza explícitamente** y solo entonces se puede pagar con
+PayPal Sandbox. Cada decisión queda en un historial que ninguna de las partes
+puede alterar.
 
-## Alcance actual
+- **Demostración pública:** https://pacto-pearl.vercel.app
+- **Para evaluadores:** [`submission/en/JUDGE_INSTRUCTIONS.md`](submission/en/JUDGE_INSTRUCTIONS.md) · [`submission/DEMO_GUIDE.md`](submission/DEMO_GUIDE.md)
+- **Concurso:** PayPal AI Hackathon — ver [`submission/`](submission/)
+- **Licencia:** MIT ([`LICENSE`](LICENSE))
 
-Fase 3 autorizada para el concurso. Incluye:
+> El producto está en español y los importes en pesos mexicanos, por el mercado
+> al que se dirige. Los materiales de la entrega están en inglés, en
+> [`submission/en/`](submission/en/), como exigen las reglas del concurso.
 
-- Autenticación con Supabase Auth y sesiones SSR (sin bypass local). Registro con correo y contraseña o con Google, confirmación de correo, recuperación de contraseña y cierre de sesión.
-- Roles `user`/`admin`: todo registro nuevo recibe `user` por un trigger de base de datos; `admin` solo se asigna mediante una migración controlada que verifica identidad, nunca desde el formulario de registro ni desde la interfaz.
-- `/admin`: panel de solo lectura (usuarios, Pactos y su estado, actividad y auditoría), exclusivo para administradores; RLS lo exige también a nivel de base de datos, no solo en la pantalla.
-- Pactos con participantes BUYER/SELLER, acuerdos versionados, revisión y aceptación por ambas partes.
-- **Cierre**: requiere un acuerdo ACCEPTED y ninguna propuesta pendiente; cada parte confirma con nota opcional, y el Pacto pasa a CLOSED cuando confirman ambas.
-- **Cancelación**: cualquier participante de un Pacto ACTIVE puede cancelarlo con motivo de 10 a 500 caracteres. Es definitiva.
-- **Historial**: `audit_events` registra cada acción con actor y, cuando aplica, su detalle (nota de cierre, motivo de cancelación, modelo de IA).
-- **Análisis de IA** (`src/lib/ai.ts`): llama a la API de Anthropic con la clave del servidor, valida la salida con un esquema estricto y registra el resultado con modelo, huella SHA-256 de la entrada y autor. Sin clave configurada, informa `NOT_CONFIGURED` y no muestra resultados simulados.
+## Probarlo sin registrarse
 
-Todos los Pactos son DEMO. No hay pagos, PayPal, Sandbox ni LIVE. La IA no modifica acuerdos ni estados. Google OAuth está en el código pero deshabilitado en Supabase hasta configurar credenciales (`docs/google-oauth-setup.md`).
+Pulsa **«Modo Juez»** en la portada. PACTO prepara dos identidades DEMO reales e
+independientes en el mismo navegador —una comprador, otra proveedor— y una barra
+superior te deja cambiar de parte con un botón. No es una simulación: cada
+identidad es un usuario real de la base de datos con su propio `auth.uid()`, y el
+servidor aplica las mismas políticas RLS a las dos. Compruébalo: como proveedor,
+el botón de autorizar el pago no existe.
+
+También está **«Explorar DEMO»**, que entra como un único visitante anónimo.
+
+## Qué incluye
+
+- **Autenticación** con Supabase Auth y sesiones SSR. Registro con correo y
+  contraseña, confirmación, recuperación y cierre de sesión. Sesiones anónimas
+  para la demostración. El botón de Google existe y refleja honestamente que el
+  proveedor está deshabilitado (`docs/google-oauth-setup.md`).
+- **Roles `user`/`admin`.** Todo registro nuevo recibe `user` por un trigger de
+  base de datos; `admin` solo se asigna mediante una migración controlada, nunca
+  desde el formulario ni desde la interfaz.
+- **`/admin`**: panel de solo lectura exclusivo para administradores. RLS lo
+  exige también a nivel de base de datos, no solo en la pantalla.
+- **Pactos** con participantes BUYER/SELLER y acuerdos versionados.
+- **Invitaciones**: el comprador genera un enlace seguro de un solo uso que
+  caduca en 7 días y puede restringirse a un correo concreto. Solo se almacena su
+  hash: ni un administrador puede reconstruirlo.
+- **Revisión y aceptación** por ambas partes. Cualquier cambio posterior crea una
+  versión nueva que hay que volver a aceptar.
+- **Hitos, evidencia y pagos**: el proveedor presenta evidencia de entrega, el
+  comprador la revisa y la autoriza, y solo un hito `APPROVED` puede pagarse. Un
+  proveedor no puede aprobar su propio cobro, y el importe se lee del hito en la
+  base de datos, nunca del formulario.
+- **PayPal Orders v2**, exclusivamente en **Sandbox**: órdenes idempotentes,
+  captura, consulta de estado y webhooks verificados que fallan cerrados. El host
+  de Sandbox está fijado en el código: no puede generar un cobro real.
+- **Cierre** con doble confirmación y **cancelación** unilateral con motivo de 10
+  a 500 caracteres. Ambas son definitivas.
+- **Análisis de IA** (`src/lib/ai.ts`): llama a la API de Anthropic con la clave
+  del servidor, valida la salida contra un esquema estricto y registra el
+  resultado con modelo, huella SHA-256 de la entrada y autor. Sin clave, informa
+  `NOT_CONFIGURED`: no muestra resultados simulados.
+- **Historial**: `audit_events` registra cada acción con actor, fecha y detalle.
+
+La IA nunca modifica un acuerdo, nunca acepta por nadie y nunca autoriza un pago.
+No es una promesa redactada: lo impide la base de datos.
 
 ## Requisitos
 
 - Node.js 22 o superior.
 - pnpm 11.28.5. Si `pnpm` no está en el PATH, usar `corepack pnpm@11.28.5`.
-- Un proyecto Supabase dedicado a PACTO con dos usuarios DEMO confirmados.
-- Opcional para análisis real: una clave de API de Anthropic.
+- Un proyecto Supabase dedicado a PACTO.
 
 ## Configuración
 
@@ -36,69 +80,146 @@ Copy-Item .env.example .env.local
 | Variable | Obligatoria | Uso |
 | --- | --- | --- |
 | `NEXT_PUBLIC_SUPABASE_URL` | Sí | URL del proyecto Supabase |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Sí | Clave pública (no service_role) |
-| `ANTHROPIC_API_KEY` | Para IA real | Solo servidor; sin prefijo `NEXT_PUBLIC_` |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Sí | Clave pública (`sb_publishable_…`), nunca `service_role` |
+| `ANTHROPIC_API_KEY` | Para la IA | Solo servidor; sin prefijo `NEXT_PUBLIC_` |
 | `ANTHROPIC_MODEL` | No | Por defecto `claude-sonnet-5-5` |
+| `PAYPAL_CLIENT_ID` / `PAYPAL_CLIENT_SECRET` | Para el pago | Credenciales **Sandbox** |
+| `PAYPAL_WEBHOOK_ID` | Para los webhooks | Sin él se rechazan, a propósito |
+| `SUPABASE_SERVICE_ROLE_KEY` | No | Solo para scripts locales y la conciliación por webhook |
+| `PACTO_DEMO_EXAMPLE_ID` | No | Pacto público de ejemplo |
+
+Sin las variables opcionales la aplicación funciona igual: la interfaz explica
+que esas funciones no están activas en vez de ofrecer botones que fallarían.
+
+Cómo obtener cada credencial: [`docs/credentials-setup.md`](docs/credentials-setup.md).
+Para comprobar cuáles están vivas, con llamadas reales a cada proveedor:
+
+```powershell
+corepack pnpm@11.28.5 check:integrations
+```
 
 ## Base de datos
 
-Aplicar en orden, desde el SQL Editor como propietario del proyecto dedicado:
+Aplicar **en orden** desde el SQL Editor de Supabase, como propietario del
+proyecto:
 
-1. `supabase/migrations/202610020001_foundation.sql` (Fase 1)
-2. `supabase/migrations/202610080001_closure_cancellation_ai.sql` (cierre, cancelación, IA)
-3. `supabase/migrations/202610090001_roles_admin.sql` (registro, roles, panel admin)
-4. `supabase/migrations/202610090002_assign_owner_admin.sql` (asigna `admin` a una única cuenta verificada; editar el UUID y correo antes de usarla en otro proyecto)
+1. `supabase/migrations/202610020001_foundation.sql`
+2. `supabase/migrations/202610080001_closure_cancellation_ai.sql`
+3. `supabase/migrations/202610090001_roles_admin.sql`
+4. `supabase/migrations/202610090002_assign_owner_admin.sql` — asigna `admin` a
+   una única cuenta verificada; editar el UUID y el correo antes de usarla en
+   otro proyecto
+5. `supabase/migrations/202610100001_demo_example.sql`
+6. `supabase/migrations/202610110001_invitations.sql`
+7. `supabase/migrations/202610120001_milestones_payments.sql`
 
-Usar `supabase/preflight.sql` antes de cada una para saber cuál aplicar. Las migraciones no son idempotentes: ejecutar cada una una sola vez. RLS está activo en todas las tablas; los clientes no tienen INSERT/UPDATE/DELETE y todas las escrituras pasan por RPC que usan `auth.uid()`.
+`supabase/preflight.sql` es una consulta de solo lectura que indica cuáles están
+ya aplicadas. Cada migración es una transacción única y aborta sola si se repite,
+así que un segundo intento no deja nada a medias. En `supabase/rollback/` están
+las reversiones de las dos últimas.
+
+RLS está activo en todas las tablas. Los clientes no tienen `INSERT`, `UPDATE` ni
+`DELETE`: todas las escrituras pasan por funciones RPC `SECURITY DEFINER` que
+usan `auth.uid()`.
+
+En **Authentication → URL Configuration** hay que añadir el dominio del
+despliegue a *Site URL* y *Redirect URLs*. En **Sign In / Providers** debe estar
+activado *Anonymous sign-ins*, del que dependen la DEMO y el Modo Juez.
 
 ## Ejecutar
 
 ```powershell
 corepack pnpm@11.28.5 install --frozen-lockfile
-corepack pnpm@11.28.5 dev
+corepack pnpm@11.28.5 dev     # http://127.0.0.1:3000
+corepack pnpm@11.28.5 build
+corepack pnpm@11.28.5 start
 ```
-
-Abrir http://127.0.0.1:3000.
 
 ## Comprobaciones
 
 ```powershell
 corepack pnpm@11.28.5 lint
 corepack pnpm@11.28.5 typecheck
-corepack pnpm@11.28.5 test
+corepack pnpm@11.28.5 test            # 152 pruebas: dominio, autorización y RLS
+corepack pnpm@11.28.5 check:secrets   # ningún secreto en el cliente ni en el repo
+corepack pnpm@11.28.5 check:integrations
 corepack pnpm@11.28.5 build
+corepack pnpm@11.28.5 exec playwright test   # 33 pruebas de extremo a extremo
 ```
 
-`pnpm test` ejecuta:
+`pnpm test` cubre:
 
-- `tests/domain.test.ts`: invariantes del dominio.
-- `tests/authorization.test.ts` y `tests/api-idor.test.ts`: autorización y acceso HTTP entre usuarios.
-- `tests/rls.test.ts`: RLS y RPC de la Fase 1 sobre PostgreSQL embebido (PGlite).
-- `tests/closure-ai.rls.test.ts`: cierre con doble confirmación, bloqueo de cambios tras cierre o cancelación, motivo obligatorio, auditoría, RLS de confirmaciones y evidencia de IA.
-- `tests/agreement-analysis.test.ts`: prompt, validación de salida y llamada al proveedor con `fetch` simulado (sin red).
+- `tests/domain.test.ts`, `tests/journey.test.ts`, `tests/account.test.ts`:
+  invariantes del dominio y del recorrido.
+- `tests/authorization.test.ts`, `tests/api-idor.test.ts`: autorización y acceso
+  HTTP entre usuarios.
+- `tests/rls.test.ts`, `tests/closure-ai.rls.test.ts`,
+  `tests/roles-admin.rls.test.ts`, `tests/demo-example.rls.test.ts`,
+  `tests/invitations.rls.test.ts`, `tests/payments.rls.test.ts`: las políticas RLS
+  y las RPC reales contra un PostgreSQL embebido (PGlite).
+- `tests/migrations.test.ts`: orden, transaccionalidad y reversión de las
+  migraciones.
+- `tests/agreement-analysis.test.ts`, `tests/paypal.test.ts`: prompt, validación
+  de salida y llamadas a los proveedores con `fetch` simulado (sin red).
 
-Las pruebas de PGlite validan el SQL real, pero **no sustituyen** la verificación contra el Supabase remoto.
+Las pruebas de PGlite ejecutan el SQL real, así que las políticas de seguridad se
+prueban de verdad y no con dobles. Aun así **no sustituyen** la verificación
+contra el Supabase remoto.
 
-## Integración con Supabase remoto (pendiente de verificación)
+Las pruebas E2E que usan visitantes DEMO no necesitan credenciales. Las de
+`tests/e2e/flows.spec.ts` sí (`PACTO_DEMO_*`) y se omiten sin ellas.
 
-Estado al cierre de esta entrega: el inicio de sesión DEMO fallaba con `invalid_credentials`. La configuración pública de Auth muestra signups habilitados y confirmación de correo activa. Mientras los usuarios DEMO no estén confirmados y con la contraseña de `.env.local`, la autenticación real no funciona. Ver `docs/architecture.md` (matriz de comprobación) y el guion de demostración.
+> **Cuidado con el cupo de sesiones anónimas.** Supabase limita los accesos
+> anónimos por hora y por dirección IP (30 por defecto). La suite completa crea
+> unas 19 entre visitantes DEMO y Modo Juez, así que **cabe una ejecución por
+> hora, no dos seguidas**. Al agotarse, las pruebas fallan con «Demasiadas
+> sesiones de prueba en la última hora»: es el límite, no una regresión. Para
+> iterar más rápido, sube el límite en Supabase → Authentication → Rate Limits,
+> o usa un proyecto Supabase aparte para las pruebas.
+>
+> Las capturas de `tests/e2e/shots.spec.ts` quedan fuera de la suite por el mismo
+> motivo; se generan con `PACTO_E2E_SHOTS=1`.
+
+Para apuntarlas a un despliegue:
+
+```powershell
+$env:PACTO_E2E_BASE_URL="https://…"; corepack pnpm@11.28.5 exec playwright test
+```
 
 ## Estructura
 
-- `src/domain`: entidades, invariantes y análisis de IA (prompt y esquema de salida), sin dependencias de UI.
+- `src/domain`: entidades, invariantes, recorrido y análisis de IA (prompt y
+  esquema de salida), sin dependencias de UI.
 - `src/application`: lectura autorizada del Pacto.
-- `src/lib`: cliente Supabase SSR, sesión validada y proveedor de IA (solo servidor).
-- `src/app`: pantallas, Server Actions y endpoint de lectura.
+- `src/lib`: cliente Supabase SSR, sesión validada, proveedor de IA y cliente de
+  PayPal (solo servidor); sesión del Modo Juez (solo navegador).
+- `src/app`: pantallas, Server Actions, endpoint de lectura y webhook de PayPal.
+- `src/components`: barra del Modo Juez, tablero de hitos, invitación y formularios.
 - `src/proxy.ts`: renovación de cookies; no es el control de autorización.
 - `supabase/migrations`: esquema, RLS, RPC transaccionales y auditoría.
-- `tests`: dominio, autorización, IDOR HTTP, RLS en PostgreSQL, IA.
-- `.github/workflows/ci.yml`: lint, typecheck, pruebas y build en cada push y pull request.
+- `supabase/rollback`: reversiones de las dos últimas migraciones.
+- `tests`: dominio, autorización, IDOR HTTP, RLS en PostgreSQL, migraciones, IA,
+  PayPal y recorridos E2E en navegador.
+- `submission/`: materiales del concurso; `submission/en/` en inglés.
+- `docs/`: arquitectura, despliegue, migraciones, credenciales y guía de jueces.
+- `.github/workflows/ci.yml`: lint, typecheck, pruebas y build en cada push y
+  pull request.
 
 ## Límites conocidos
 
-- Un solo hito y criterio por versión; el editor multi-hito queda para una fase posterior.
-- El proveedor se incorpora por UUID de una identidad Auth ya provisionada; no hay invitaciones.
-- La cancelación es unilateral (decisión de producto documentada); el cierre requiere ambas partes.
-- Los análisis de IA se registran tal como los envía la aplicación. Un participante autenticado con acceso directo a la RPC `record_ai_analysis` podría registrar un resultado manual; la huella y el modelo permiten detectarlo en la auditoría, pero no lo impiden.
+- Un solo hito y criterio por versión; el editor multi-hito queda para una fase
+  posterior.
+- La cancelación es unilateral (decisión de producto documentada); el cierre
+  requiere a ambas partes.
+- Los análisis de IA se registran tal como los envía la aplicación. Un
+  participante autenticado con acceso directo a la RPC `record_ai_analysis`
+  podría registrar un resultado manual; la huella y el modelo permiten detectarlo
+  en la auditoría, pero no lo impiden.
+- PACTO no retiene fondos ni actúa como escrow: el dinero va del comprador al
+  proveedor dentro de PayPal, y PACTO registra el resultado.
 - No hay certificación de firma electrónica ni asesoría jurídica.
-- No hay despliegue público todavía; ver `docs/architecture.md`.
+- El registro público por correo depende del servicio de correo integrado de
+  Supabase, limitado a 2 correos por hora. Para abrirlo al público haría falta un
+  SMTP propio (`docs/pending-public-launch.md`).
+- **El despliegue público está desactualizado** respecto a esta rama: ver
+  `docs/deployment.md`.

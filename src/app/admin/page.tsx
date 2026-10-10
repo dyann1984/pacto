@@ -1,4 +1,4 @@
-import { requireSession } from "@/lib/session";
+import { requireAdmin } from "@/lib/session";
 
 const money = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" });
 const dateFmt = (iso: string | null) =>
@@ -30,7 +30,7 @@ type AdminUser = {
 };
 
 export default async function AdminOverview() {
-  const { db } = await requireSession();
+  const { db } = await requireAdmin();
 
   const [usersResult, pactosResult, agreementsResult, auditResult] = await Promise.all([
     db.rpc("admin_list_users"),

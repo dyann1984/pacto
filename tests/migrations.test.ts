@@ -8,6 +8,8 @@ const ROLES = "supabase/migrations/202610090001_roles_admin.sql";
 const DEMO = "supabase/migrations/202610100001_demo_example.sql";
 const INVITATIONS = "supabase/migrations/202610110001_invitations.sql";
 const ROLLBACK = "supabase/rollback/202610110001_invitations.down.sql";
+const PAYMENTS = "supabase/migrations/202610120001_milestones_payments.sql";
+const PAYMENTS_ROLLBACK = "supabase/rollback/202610120001_milestones_payments.down.sql";
 const PREFLIGHT ="supabase/preflight.sql";
 
 const databases: PGlite[] = [];
@@ -65,7 +67,40 @@ describe("migration sequencing and safety", () => {
 
     await db.exec(await readFile(INVITATIONS, "utf8"));
     const afterInvitations = await preflight(db);
-    expect(Object.values(afterInvitations).every((ok) => ok === true)).toBe(true);
+    expect(afterInvitations["invitaciones: rpc accept_invitation"]).toBe(true);
+    expect(afterInvitations["pagos: tabla payments"]).toBe(false);
+
+    await db.exec(await readFile(PAYMENTS, "utf8"));
+    const afterPayments = await preflight(db);
+    expect(Object.values(afterPayments).every((ok) => ok === true)).toBe(true);
+  });
+
+  it("refuses the payments migration before invitations, and a re-run aborts", async () => {
+    const db = await freshDatabase();
+    for (const file of [FOUNDATION, CLOSURE, ROLES, DEMO]) await db.exec(await readFile(file, "utf8"));
+    await expect(db.exec(await readFile(PAYMENTS, "utf8"))).rejects.toThrow("PREREQUISITE_MISSING");
+    await db.exec("rollback");
+    expect((await preflight(db))["pagos: tabla payments"]).toBe(false);
+    await db.exec(await readFile(INVITATIONS, "utf8"));
+    await db.exec(await readFile(PAYMENTS, "utf8"));
+    await expect(db.exec(await readFile(PAYMENTS, "utf8"))).rejects.toThrow("MIGRATION_ALREADY_APPLIED");
+    await db.exec("rollback");
+    expect((await preflight(db))["pagos: rpc record_payment_result"]).toBe(true);
+  });
+
+  it("the payments rollback removes only payment objects and keeps pactos and milestones", async () => {
+    const db = await freshDatabase();
+    for (const file of [FOUNDATION, CLOSURE, ROLES, DEMO, INVITATIONS, PAYMENTS]) await db.exec(await readFile(file, "utf8"));
+    const buyer = "11111111-1111-4111-8111-111111111111";
+    await db.query("insert into auth.users(id,email) values($1,'a@example.com')", [buyer]);
+    await db.query("select set_config('request.jwt.claim.sub',$1,false)", [buyer]);
+    const pacto = (await db.query<{ id: string }>("select public.create_pacto('Con pagos','Alcance para probar la reversión de pagos',1000) id")).rows[0].id;
+    await db.exec(await readFile(PAYMENTS_ROLLBACK, "utf8"));
+    expect((await preflight(db))["pagos: tabla payments"]).toBe(false);
+    expect((await db.query("select id from public.pactos where id=$1", [pacto])).rows).toHaveLength(1);
+    expect((await db.query("select id from public.milestones")).rows.length).toBeGreaterThan(0);
+    await db.exec(await readFile(PAYMENTS, "utf8"));
+    expect((await preflight(db))["pagos: tabla payments"]).toBe(true);
   });
 
   it("refuses to run the invitations migration before demo-example, and a re-run aborts", async () => {
@@ -175,6 +210,7 @@ describe("migration sequencing and safety", () => {
     );
     await db.exec("rollback");
     await db.exec(await readFile(INVITATIONS, "utf8"));
+    await db.exec(await readFile(PAYMENTS, "utf8"));
     const state = await preflight(db);
     expect(Object.values(state).every((ok) => ok === true)).toBe(true);
   });
