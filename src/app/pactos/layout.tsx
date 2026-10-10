@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Brand } from "@/components/brand";
 import { requireSession } from "@/lib/session";
 import { signOut } from "@/app/sign-in/actions";
+import { JudgeBar } from "@/components/judge-bar";
 export const dynamic = "force-dynamic";
 export default async function PactoLayout({
   children,
@@ -43,6 +44,7 @@ export default async function PactoLayout({
         </div>
       </aside>
       <div className="workspace-main">
+        <JudgeBar />
         {isDemoVisitor && (
           <div className="notice notice-info demo-banner" role="status">
             Estás en <strong>modo DEMO</strong>: una sesión temporal y privada,

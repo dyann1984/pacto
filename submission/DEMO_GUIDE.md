@@ -2,8 +2,32 @@
 
 **https://pacto-pearl.vercel.app** — no hace falta registrarse ni instalar nada.
 
-Duración: unos 5 minutos. Necesitarás **dos ventanas**: una normal para el cliente
-y una de incógnito para el proveedor, porque son dos personas distintas.
+## La vía rápida: Modo Juez (5 minutos, tú solo)
+
+Un acuerdo necesita dos partes. Para que no tengas que buscar a otra persona,
+pulsa **«Modo Juez»** en la portada.
+
+PACTO prepara **dos sesiones DEMO reales e independientes** —una como cliente y
+otra como proveedor— y una barra superior te dice quién eres en cada momento y te
+deja pasar a la otra parte con un botón.
+
+No es una simulación ni un atajo: cada identidad es un usuario real de la base de
+datos con su propio identificador, y el servidor aplica exactamente las mismas
+comprobaciones. Cambiar de rol equivale a iniciar sesión como la otra persona.
+Compruébalo tú: como proveedor, el botón de autorizar el pago no existe.
+
+El formulario llega relleno con un escenario realista, y cuando un paso le toca a
+la otra parte, la pantalla te lo dice. Hay un botón **«Reiniciar demostración»**
+que crea un escenario nuevo y aislado sin borrar nada de lo anterior.
+
+> **Si ves "Demasiadas sesiones de prueba en la última hora":** es el límite de
+> accesos anónimos de Supabase, por hora y por dirección IP. Espera unos minutos,
+> o entra en la DEMO normal, que usa una sola sesión.
+
+## La vía manual (dos personas)
+
+Si prefieres hacerlo con alguien más, sigue estos pasos con **dos ventanas**: una
+normal para el cliente y una de incógnito para el proveedor.
 
 ---
 

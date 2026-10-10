@@ -1,6 +1,7 @@
 import { SubmitButton } from "@/components/submit-button";
 import { approveMilestone, startPayment, submitEvidence } from "@/app/pactos/actions";
 import type { Role } from "@/domain/foundation";
+import { JudgeRoleNote } from "@/components/judge-role-note";
 
 const money = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" });
 
@@ -82,6 +83,10 @@ export function MilestoneBoard({
               <p className="fine-print">Comprobante de PayPal: {row.capture_id}</p>
             )}
             <p>{next.text}</p>
+            {/* En Modo Juez: si el paso le toca a la otra parte, se indica el cambio. */}
+            {!next.action && row.status !== "PAID" && (
+              <JudgeRoleNote role={row.status === "PENDING" ? "SELLER" : "BUYER"} />
+            )}
 
             {next.action === "evidence" && (
               <form action={submitEvidence}>

@@ -1,6 +1,43 @@
 "use client";
 import { useActionState, useState } from "react";
+import { useRouter } from "next/navigation";
 import { createInvitation, type InvitationState } from "@/app/pactos/actions";
+import { switchRole, useJudgeRole } from "@/lib/judge-session";
+
+/**
+ * Atajo del Modo Juez: cambia a la identidad del proveedor y abre la invitación,
+ * que es justo lo que haría la otra persona. El enlace sigue siendo de un solo
+ * uso y la aceptación la valida el servidor igual que siempre.
+ */
+function JudgeInviteShortcut({ link }: { link: string }) {
+  const router = useRouter();
+  const acting = useJudgeRole();
+  const [failed, setFailed] = useState(false);
+
+  if (!acting) return null;
+
+  return (
+    <div className="judge-note">
+      <strong>Modo Juez:</strong> ahora te toca ser el proveedor.
+      <button
+        type="button"
+        className="button button-light"
+        onClick={async () => {
+          setFailed(false);
+          try {
+            if (acting !== "SELLER") await switchRole();
+            router.push(new URL(link).pathname);
+          } catch {
+            setFailed(true);
+          }
+        }}
+      >
+        Abrir la invitación como proveedor →
+      </button>
+      {failed && <p role="alert">No se pudo cambiar de parte. Recarga e inténtalo de nuevo.</p>}
+    </div>
+  );
+}
 
 // Invitación del proveedor: un enlace seguro de un solo uso. El correo se abre en el
 // cliente de la propia persona (mailto:), así PACTO no envía mensajes en su nombre.
@@ -50,9 +87,10 @@ export function InviteSeller({ pactoId, title }: { pactoId: string; title: strin
           funcionar.
           {state.email ? ` Solo ${state.email} podrá aceptarlo.` : ""}
         </p>
+        <JudgeInviteShortcut link={state.link} />
         <p className="fine-print">
-          ¿Quieres probar el recorrido tú mismo? Abre el enlace en una ventana
-          privada y entra como visitante DEMO para actuar como proveedor.
+          Fuera del Modo Juez: ábrelo en una ventana privada y entra como visitante
+          DEMO para actuar como proveedor.
         </p>
       </div>
     );

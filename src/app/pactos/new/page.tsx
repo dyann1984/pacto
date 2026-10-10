@@ -2,9 +2,12 @@ import { createPacto } from "../actions";
 export default async function Create({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; juez?: string }>;
 }) {
-  const { status } = await searchParams;
+  const { status, juez } = await searchParams;
+  // En Modo Juez el formulario llega relleno con un escenario realista, para que
+  // la evaluación empiece por lo que importa en vez de por teclear.
+  const sample = juez === "1";
   return (
     <>
       <div className="page-heading">
@@ -30,6 +33,7 @@ export default async function Create({
               minLength={4}
               maxLength={120}
               placeholder="Ej. Impermeabilización residencial"
+              defaultValue={sample ? "Rediseño de tienda en línea" : undefined}
               required
             />
           </label>
@@ -41,6 +45,11 @@ export default async function Create({
               maxLength={5000}
               rows={6}
               placeholder="Describe qué se entrega, qué queda fuera y cómo ambas partes comprobarán la entrega."
+              defaultValue={
+                sample
+                  ? "Rediseñar la tienda en línea, migrar el catálogo de 120 productos y capacitar al equipo durante una sesión. No incluye fotografía de producto ni redacción de contenidos. Se considera entregado cuando la tienda esté publicada en el dominio del cliente y el equipo haya recibido la capacitación."
+                  : undefined
+              }
               required
             />
           </label>
@@ -52,6 +61,7 @@ export default async function Create({
               min="1"
               max="1000000"
               step="0.01"
+              defaultValue={sample ? "25000" : undefined}
               required
             />
           </label>

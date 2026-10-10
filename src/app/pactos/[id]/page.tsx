@@ -6,6 +6,7 @@ import { isAnalysisConfigured } from "@/lib/ai";
 import { InviteSeller } from "@/components/invite-seller";
 import { isPayPalConfigured } from "@/lib/paypal";
 import { MilestoneBoard, type MilestoneRow } from "@/components/milestone-board";
+import { JudgeRoleNote } from "@/components/judge-role-note";
 import { SubmitButton } from "@/components/submit-button";
 import {
   agreementStateLabels,
@@ -327,6 +328,10 @@ export default async function Center({
         <span className="eyebrow">{step.waiting ? "EN ESPERA" : "QUÉ SIGUE"}</span>
         <h2 id="next-step-title">{step.title}</h2>
         <p>{step.body}</p>
+        {/* En Modo Juez, si el paso le toca a la otra parte, se indica el cambio. */}
+        {isActive && step.waiting && myRole && (
+          <JudgeRoleNote role={myRole === "BUYER" ? "SELLER" : "BUYER"} />
+        )}
         {isActive && step.action === "invite" &&
           (invitationsAvailable ? (
             <>

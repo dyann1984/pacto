@@ -31,13 +31,17 @@ export default function Landing() {
             <Link className="button" href="/demo">
               Explorar DEMO <span>→</span>
             </Link>
+            <Link className="button button-outline" href="/juez">
+              Modo Juez
+            </Link>
             <Link className="button button-outline" href="/sign-up">
               Crear mi cuenta
             </Link>
           </div>
           <p className="fine-print">
-            Explora sin registrarte: una sesión temporal y privada. Crea un
-            acuerdo, invita a un proveedor y ciérrenlo juntos.
+            Explora sin registrarte: una sesión temporal y privada. ¿Evalúas PACTO?
+            El <Link href="/juez">Modo Juez</Link> te deja recorrer el ciclo completo
+            tú solo, actuando como cliente y como proveedor.
           </p>
         </div>
         <div className="brand-panel">
