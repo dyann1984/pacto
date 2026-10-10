@@ -87,9 +87,12 @@ pnpm build && pnpm start
 The automated evidence:
 
 ```bash
-pnpm test                               # 152 unit, authorization and RLS tests
-pnpm build && pnpm exec playwright test # 24 end-to-end tests in a real browser
+pnpm test                               # 156 unit, authorization and RLS tests
+pnpm build && pnpm exec playwright test # 25 end-to-end tests in a real browser
 ```
+
+(Ten further end-to-end tests are skipped without optional demo credentials; see
+`docs/credentials-setup.md`.)
 
 The RLS tests run the real migrations against an in-memory PostgreSQL (PGlite),
 so the security policies are exercised for real rather than against test doubles.

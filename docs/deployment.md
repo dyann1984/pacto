@@ -60,7 +60,7 @@ Si la suite pasa contra el Preview, promuévelo desde el panel de Vercel
 - [x] `pnpm build` compila con TypeScript estricto
 - [x] `pnpm lint` sin errores
 - [x] `pnpm test` — 152/152
-- [x] `pnpm exec playwright test` — 24 pasan, 9 omitidas (faltan credenciales DEMO)
+- [x] `pnpm exec playwright test` — 25 pasan, 0 fallan, 10 omitidas (9 por falta de credenciales DEMO, 1 son las capturas bajo demanda)
 - [x] `pnpm check:secrets` — ningún secreto en el cliente
 - [ ] `pnpm check:integrations` — 4 credenciales pendientes (ver `credentials-setup.md`)
 
@@ -100,6 +100,23 @@ En **Authentication → URL Configuration**:
 En **Authentication → Sign In / Providers**: *Anonymous sign-ins* debe estar
 activado. Verificado el 10 de octubre de 2026: **está activado** (lo confirma
 `pnpm check:integrations`). De él dependen «Explorar DEMO» y el Modo Juez.
+
+### Recomendación antes de la evaluación: subir el cupo de sesiones anónimas
+
+En **Authentication → Rate Limits**, el límite de accesos anónimos por hora y
+por dirección IP viene en **30** por defecto. Es poco para un periodo de
+evaluación:
+
+- El Modo Juez consume **dos** sesiones por recorrido, y «Reiniciar
+  demostración» otras dos cada vez.
+- Varios jueces detrás de una misma red corporativa o VPN comparten la cuenta
+  de la IP.
+- Comprobado el 10 de octubre de 2026: la suite E2E completa (~19 sesiones) cabe
+  una vez por hora, pero dos ejecuciones seguidas agotan el cupo.
+
+Un juez que lo agote **no** ve una avería: ambas entradas explican que es un
+límite temporal y qué hacer. Aun así, subirlo durante el periodo de evaluación
+evita el tropiezo. Es un cambio de panel, sin coste y reversible.
 
 ## Principios
 

@@ -2,6 +2,12 @@ import { test } from "@playwright/test";
 
 // Captura de pantallas para la entrega. Se ejecuta a mano, no forma parte de la
 // suite habitual: crea un escenario DEMO nuevo igual que haría un juez.
+//
+// Queda fuera por defecto porque gasta dos sesiones anónimas del cupo horario
+// que Supabase aplica por IP, y la suite completa ya se acerca a ese límite.
+// Para generarlas:  PACTO_E2E_SHOTS=1 pnpm exec playwright test tests/e2e/shots.spec.ts
+test.skip(!process.env.PACTO_E2E_SHOTS, "Capturas bajo demanda: PACTO_E2E_SHOTS=1");
+
 test("capturas del Modo Juez", async ({ page }) => {
   await page.goto("/");
   await page.screenshot({ path: "test-results/juez-1-portada.png" });

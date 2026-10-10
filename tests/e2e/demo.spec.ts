@@ -34,6 +34,47 @@ test("el Pacto de ejemplo público es visible, de solo lectura, sin acciones dis
   await expect(page.getByRole("button", { name: /Analizar versión/ })).toHaveCount(0);
 });
 
+// Agotar el cupo horario de sesiones anónimas es el fallo más probable que verá
+// un juez, y el único que se arregla esperando. Si se presenta como una avería
+// genérica, quien evalúa concluye que PACTO no funciona. Se fuerza el 429 en la
+// respuesta de Supabase en vez de consumir el cupo real, que dejaría sin
+// ejecutar al resto de la suite.
+test("agotar el cupo de sesiones anónimas se explica como una espera, no como una avería", async ({ page }) => {
+  await page.route("**/auth/v1/signup**", (route) =>
+    route.fulfill({
+      status: 429,
+      contentType: "application/json",
+      body: JSON.stringify({ code: "over_request_rate_limit", message: "Request rate limit reached" }),
+    }),
+  );
+
+  await page.goto("/demo");
+
+  // `.notice` acota al aviso de la pantalla: Next monta su propio role="alert"
+  // para anunciar los cambios de ruta.
+  const notice = page.locator(".notice[role='alert']");
+  await expect(notice).toContainText("Demasiadas sesiones de prueba en la última hora");
+  await expect(notice).toContainText("espera unos minutos");
+  await expect(notice.getByRole("link", { name: /inicia sesión con una cuenta/ })).toBeVisible();
+  // No debe confundirse con el mensaje de avería.
+  await expect(page.getByText("Modo DEMO no disponible por ahora")).toHaveCount(0);
+});
+
+test("un fallo que no es el cupo se presenta como indisponibilidad, no como espera", async ({ page }) => {
+  await page.route("**/auth/v1/signup**", (route) =>
+    route.fulfill({
+      status: 500,
+      contentType: "application/json",
+      body: JSON.stringify({ message: "internal error" }),
+    }),
+  );
+
+  await page.goto("/demo");
+
+  await expect(page.locator(".notice[role='alert']")).toContainText("Modo DEMO no disponible por ahora");
+  await expect(page.getByText("Demasiadas sesiones de prueba")).toHaveCount(0);
+});
+
 test("dos visitantes DEMO distintos están aislados entre sí", async ({ browser }) => {
   const contextA = await browser.newContext();
   const contextB = await browser.newContext();

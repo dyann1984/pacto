@@ -96,12 +96,21 @@ decisión o una credencial de la propietaria; ninguno requiere tocar el código.
 
 | Comprobación | Resultado |
 |---|---|
-| `pnpm test` | **152/152** (unitarias, autorización y RLS contra PostgreSQL real) |
-| `pnpm exec playwright test` | **24 pasan, 9 omitidas** (las omitidas necesitan credenciales DEMO) |
+| `pnpm test` | **156/156** (unitarias, autorización y RLS contra PostgreSQL real) |
+| `pnpm exec playwright test` | **25 pasan, 0 fallan, 10 omitidas** (9 necesitan credenciales DEMO; 1 son las capturas, bajo demanda) |
 | `pnpm build` | ✅ compila, con TypeScript en modo estricto |
 | `pnpm lint` | ✅ sin errores |
+| `pnpm check:secrets` | ✅ ningún secreto en el bundle de cliente ni en el repositorio |
+| `pnpm check:integrations` | ⚠️ Supabase vivo y con accesos anónimos activos; 4 credenciales ausentes |
 | Recorrido completo en navegador, Modo Juez | ✅ crear → invitar → unirse → aceptar ×2 → evidencia → autorizar → cerrar |
 | Recorrido completo contra la base de datos real | ✅ incluidas las negativas: el proveedor no puede aprobar su propio hito |
+
+> **Sobre el cupo de sesiones anónimas.** Supabase limita los accesos anónimos a
+> 30 por hora y por IP. La suite E2E crea unas 19, así que cabe **una ejecución
+> por hora**. Dos seguidas agotan el cupo y las pruebas fallan con «Demasiadas
+> sesiones de prueba en la última hora»: es el límite, no una regresión. Conviene
+> subirlo en el panel de Supabase durante el periodo de evaluación
+> (`docs/deployment.md`).
 
 ## Decisiones que requieren a la propietaria
 

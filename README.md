@@ -170,11 +170,15 @@ Las pruebas E2E que usan visitantes DEMO no necesitan credenciales. Las de
 `tests/e2e/flows.spec.ts` sí (`PACTO_DEMO_*`) y se omiten sin ellas.
 
 > **Cuidado con el cupo de sesiones anónimas.** Supabase limita los accesos
-> anónimos por hora y por dirección IP, y la suite completa crea más de veinte
-> entre visitantes DEMO y Modo Juez. Ejecutarla dos veces seguidas agota el cupo
-> y las pruebas empiezan a fallar con «Modo DEMO no disponible» o «Demasiadas
-> sesiones de prueba»: es el límite, no una regresión. Espera una hora, o usa un
-> proyecto Supabase aparte para las pruebas.
+> anónimos por hora y por dirección IP (30 por defecto). La suite completa crea
+> unas 19 entre visitantes DEMO y Modo Juez, así que **cabe una ejecución por
+> hora, no dos seguidas**. Al agotarse, las pruebas fallan con «Demasiadas
+> sesiones de prueba en la última hora»: es el límite, no una regresión. Para
+> iterar más rápido, sube el límite en Supabase → Authentication → Rate Limits,
+> o usa un proyecto Supabase aparte para las pruebas.
+>
+> Las capturas de `tests/e2e/shots.spec.ts` quedan fuera de la suite por el mismo
+> motivo; se generan con `PACTO_E2E_SHOTS=1`.
 
 Para apuntarlas a un despliegue:
 
