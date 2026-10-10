@@ -48,5 +48,9 @@ from (values
   ('invitaciones: tabla invitations',
     exists(select 1 from information_schema.tables where table_schema='public' and table_name='invitations')),
   ('invitaciones: rpc accept_invitation',
-    exists(select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname='accept_invitation'))
+    exists(select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname='accept_invitation')),
+  ('pagos: tabla payments',
+    exists(select 1 from information_schema.tables where table_schema='public' and table_name='payments')),
+  ('pagos: rpc record_payment_result',
+    exists(select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname='record_payment_result'))
 ) as checks(check_name, ok);

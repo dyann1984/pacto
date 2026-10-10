@@ -6,6 +6,7 @@ import { requireSession } from "@/lib/session";
 import { createPactoSchema } from "@/domain/foundation";
 import { analyzeAgreement } from "@/lib/ai";
 import { requestOrigin } from "@/lib/origin";
+import { createOrder, isPayPalConfigured } from "@/lib/paypal";
 
 // Códigos de negocio que levanta PostgreSQL; cualquier otro error se reporta como "failed".
 const knownActionCodes = [
@@ -204,6 +205,93 @@ export async function acceptInvitation(form: FormData) {
 }
 
 const AI_ANALYSES_PER_VERSION = 3;
+
+const milestoneErrors = [
+  "EVIDENCE_REQUIRED",
+  "APPROVAL_REQUIRED",
+  "AMOUNT_MISMATCH",
+  "PAYMENT_ALREADY_OPEN",
+  "INVALID_TRANSITION",
+  "INVALID_INPUT",
+  "INVALID_STATE",
+  "PACTO_NOT_ACTIVE",
+] as const;
+
+function milestoneErrorCode(message: string | undefined) {
+  return milestoneErrors.find((code) => message?.includes(code)) ?? "failed";
+}
+
+/** El proveedor presenta evidencia de cumplimiento de un hito. */
+export async function submitEvidence(form: FormData) {
+  const { db } = await requireSession();
+  const pactoId = z.uuid().parse(form.get("pactoId"));
+  const milestoneId = z.uuid().parse(form.get("milestoneId"));
+  const evidence = z.string().trim().min(10).max(2000).safeParse(form.get("evidence"));
+  if (!evidence.success) redirect(`/pactos/${pactoId}?pago=INVALID_INPUT`);
+  const { error } = await db.rpc("submit_milestone_evidence", {
+    m_id: milestoneId,
+    p_evidence: evidence.data,
+  });
+  if (error) redirect(`/pactos/${pactoId}?pago=${milestoneErrorCode(error.message)}`);
+  revalidatePath(`/pactos/${pactoId}`);
+  redirect(`/pactos/${pactoId}?pago=evidencia`);
+}
+
+/** El cliente revisa y autoriza el hito. Es la aprobación humana previa al pago. */
+export async function approveMilestone(form: FormData) {
+  const { db } = await requireSession();
+  const pactoId = z.uuid().parse(form.get("pactoId"));
+  const milestoneId = z.uuid().parse(form.get("milestoneId"));
+  const { error } = await db.rpc("approve_milestone", { m_id: milestoneId });
+  if (error) redirect(`/pactos/${pactoId}?pago=${milestoneErrorCode(error.message)}`);
+  revalidatePath(`/pactos/${pactoId}`);
+  redirect(`/pactos/${pactoId}?pago=aprobado`);
+}
+
+/**
+ * Crea la orden en PayPal Sandbox y lleva al cliente a aprobarla en PayPal.
+ * El importe no viene del formulario: se lee del hito en la base, y la RPC
+ * vuelve a comprobar que coincide. Así un formulario manipulado no cambia nada.
+ */
+export async function startPayment(form: FormData) {
+  const { db } = await requireSession();
+  const pactoId = z.uuid().parse(form.get("pactoId"));
+  const milestoneId = z.uuid().parse(form.get("milestoneId"));
+  if (!isPayPalConfigured()) redirect(`/pactos/${pactoId}?pago=no-configurado`);
+
+  const { data: milestone, error: milestoneError } = await db
+    .from("milestones")
+    .select("id,title,amount_cents,status")
+    .eq("id", milestoneId)
+    .maybeSingle();
+  if (milestoneError || !milestone) redirect(`/pactos/${pactoId}?pago=failed`);
+  if (milestone.status !== "APPROVED") redirect(`/pactos/${pactoId}?pago=APPROVAL_REQUIRED`);
+
+  const origin = await requestOrigin();
+  const order = await createOrder({
+    amountCents: milestone.amount_cents,
+    currency: "MXN",
+    reference: milestone.id,
+    description: `PACTO · ${milestone.title}`,
+    returnUrl: `${origin}/pactos/${pactoId}/pago?milestone=${milestone.id}`,
+    cancelUrl: `${origin}/pactos/${pactoId}?pago=cancelado`,
+  });
+  if (order.status === "NOT_CONFIGURED") redirect(`/pactos/${pactoId}?pago=no-configurado`);
+  if (order.status === "ERROR") {
+    console.error(`[paypal] createOrder -> ${order.code}`);
+    redirect(`/pactos/${pactoId}?pago=proveedor`);
+  }
+
+  const { error } = await db.rpc("record_payment_order", {
+    m_id: milestoneId,
+    p_order_id: order.data.orderId,
+    p_amount_cents: milestone.amount_cents,
+  });
+  if (error) redirect(`/pactos/${pactoId}?pago=${milestoneErrorCode(error.message)}`);
+  revalidatePath(`/pactos/${pactoId}`);
+  // Aprobación explícita del pagador: la hace la persona dentro de PayPal.
+  redirect(order.data.approveUrl);
+}
 
 // Asistencia de IA: solo lectura del acuerdo. Nunca cambia estados ni importes.
 export async function runAgreementAnalysis(form: FormData) {
