@@ -11,3 +11,5 @@ playwright-report/
 .pnpm-store/
 .vercel
 supabase/.temp/
+# Configuración local del editor/agente (puertos y comandos de arranque).
+.claude/

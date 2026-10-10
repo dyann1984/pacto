@@ -8,6 +8,13 @@ el cliente autoriza y el pago se procesa en **PayPal Sandbox**. Todo queda audit
 - **Stack:** Next.js 16 (App Router, Server Actions) · TypeScript · Supabase
   (Auth + Postgres + RLS) · Vercel · PayPal Orders v2 · API de Anthropic
 
+> Las reglas del concurso exigen que todo el material de la entrega esté en
+> inglés. Las versiones en inglés están en [`en/`](en/):
+> [`en/PROJECT_DESCRIPTION.md`](en/PROJECT_DESCRIPTION.md) (descripción para
+> Devpost) y [`en/JUDGE_INSTRUCTIONS.md`](en/JUDGE_INSTRUCTIONS.md)
+> (instrucciones de prueba). El estado de la entrega, con las reglas oficiales ya
+> verificadas, está en [`SUBMISSION_CHECKLIST.md`](SUBMISSION_CHECKLIST.md).
+
 ## Requisitos
 
 - Node.js 22 o superior
@@ -35,6 +42,13 @@ Variables mínimas para arrancar (`.env.local`):
 
 Sin las variables opcionales la aplicación funciona igual: la interfaz explica que
 esas funciones no están activas en vez de ofrecer botones que fallarían.
+
+Cómo obtener cada credencial, paso a paso: [`../docs/credentials-setup.md`](../docs/credentials-setup.md).
+Para comprobar cuáles responden de verdad, con llamadas reales a cada proveedor:
+
+```bash
+pnpm check:integrations
+```
 
 ## Base de datos
 
@@ -71,8 +85,9 @@ pnpm start        # servir la compilación
 ```bash
 pnpm typecheck
 pnpm lint
-pnpm test          # unitarias, RLS y autorización (Postgres real en memoria)
-pnpm check:secrets # ningún secreto en el cliente ni en el repositorio
+pnpm test               # unitarias, RLS y autorización (Postgres real en memoria)
+pnpm check:secrets      # ningún secreto en el cliente ni en el repositorio
+pnpm check:integrations # qué integraciones externas responden de verdad
 pnpm build && pnpm exec playwright test   # extremo a extremo
 ```
 

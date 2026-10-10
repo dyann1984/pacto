@@ -32,6 +32,9 @@ test("a judge completes create → invite → join → accept → evidence → a
   await expect(page.getByLabel("Enlace de invitación")).toHaveValue(/\/invitacion\/[0-9a-f]{64}$/);
   await page.getByRole("button", { name: /Abrir la invitación como proveedor/ }).click();
   await page.waitForURL(/\/invitacion\/[0-9a-f]{64}/);
+  // La invitación vive fuera del espacio de trabajo: sin la barra, el evaluador
+  // no sabría con cuál de las dos identidades DEMO está abriendo el enlace.
+  await expect(page.getByText("Actúas como proveedor")).toBeVisible();
   await page.getByRole("button", { name: "Unirme como proveedor →" }).click();
   await page.waitForURL(new RegExp(`/pactos/${pactoId}`));
   await expect(page.getByText("Te uniste como proveedor")).toBeVisible();

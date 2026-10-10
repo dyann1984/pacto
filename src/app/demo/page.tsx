@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseBrowser } from "@/lib/supabase-browser";
 import { safeNextPath } from "@/lib/next-path";
+import { isRateLimited } from "@/lib/auth-errors";
 
 // Punto de entrada del modo DEMO: crea una sesión anónima real de Supabase
 // (auth.signInWithAnonymous) si el visitante no tiene ninguna, y lo envía a la
@@ -11,7 +12,7 @@ import { safeNextPath } from "@/lib/next-path";
 // usuario real: cada sesión anónima tiene su propio auth.uid() único.
 export default function Demo() {
   const router = useRouter();
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<null | "rate-limited" | "unavailable">(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -23,7 +24,9 @@ export default function Demo() {
       if (!session) {
         const { error: anonError } = await db.auth.signInAnonymously();
         if (anonError) {
-          if (!cancelled) setError(true);
+          // Agotar el cupo horario de sesiones anónimas no es una avería, y
+          // confundirlo con una deja a quien evalúa sin saber que basta esperar.
+          if (!cancelled) setError(isRateLimited(anonError) ? "rate-limited" : "unavailable");
           return;
         }
       }
@@ -40,7 +43,18 @@ export default function Demo() {
   return (
     <main className="auth-layout">
       <section className="auth-form" style={{ margin: "auto", textAlign: "center" }}>
-        {error ? (
+        {error === "rate-limited" && (
+          <div className="notice" role="alert">
+            <strong>Demasiadas sesiones de prueba en la última hora</strong>
+            <p>
+              PACTO limita cuántas sesiones anónimas se crean por hora y por
+              dirección IP, para evitar abusos. No es un fallo: espera unos
+              minutos y vuelve a intentarlo, o{" "}
+              <a href="/sign-in">inicia sesión con una cuenta</a>.
+            </p>
+          </div>
+        )}
+        {error === "unavailable" && (
           <div className="notice" role="alert">
             <strong>Modo DEMO no disponible por ahora</strong>
             <p>
@@ -48,9 +62,8 @@ export default function Demo() {
               <a href="/sign-in">inicia sesión con una cuenta</a>.
             </p>
           </div>
-        ) : (
-          <p>Preparando tu sesión de demostración…</p>
         )}
+        {!error && <p>Preparando tu sesión de demostración…</p>}
       </section>
     </main>
   );

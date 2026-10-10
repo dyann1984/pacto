@@ -1,6 +1,7 @@
 "use client";
 import { createClient } from "@supabase/supabase-js";
 import { supabaseBrowser } from "@/lib/supabase-browser";
+import { isRateLimited } from "@/lib/auth-errors";
 
 /**
  * Modo Juez: dos sesiones DEMO reales y aisladas en el mismo navegador, para que
@@ -103,8 +104,7 @@ async function newAnonymousSession(): Promise<StoredSession> {
   const { data, error } = await throwaway.auth.signInAnonymously();
   // Supabase limita los accesos anónimos por hora y por IP. Se distingue de un
   // fallo genérico para poder decirle a la persona que solo tiene que esperar.
-  if (error?.status === 429 || error?.code === "over_request_rate_limit")
-    throw new Error("DEMO_RATE_LIMITED");
+  if (isRateLimited(error)) throw new Error("DEMO_RATE_LIMITED");
   if (error || !data.session) throw new Error("DEMO_UNAVAILABLE");
   return {
     accessToken: data.session.access_token,

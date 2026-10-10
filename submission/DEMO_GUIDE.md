@@ -21,8 +21,11 @@ la otra parte, la pantalla te lo dice. Hay un botón **«Reiniciar demostración
 que crea un escenario nuevo y aislado sin borrar nada de lo anterior.
 
 > **Si ves "Demasiadas sesiones de prueba en la última hora":** es el límite de
-> accesos anónimos de Supabase, por hora y por dirección IP. Espera unos minutos,
-> o entra en la DEMO normal, que usa una sola sesión.
+> accesos anónimos de Supabase, por hora y por dirección IP. No es una avería. El
+> Modo Juez gasta dos de ese cupo y la DEMO normal solo una, así que la DEMO
+> suele seguir funcionando cuando el Modo Juez ya no. Si no, espera unos minutos
+> o inicia sesión con una cuenta. Las dos entradas distinguen este caso de un
+> fallo real y te dicen en cuál estás.
 
 ## La vía manual (dos personas)
 

@@ -1,8 +1,13 @@
 # Video script — under 3 minutes
 
-Target: 2:45. Screen recording of https://pacto-pearl.vercel.app with voice-over.
-Record two browser windows side by side: a normal one (the buyer) and an incognito
-one (the seller), so the two parties are visible at once.
+Target: 2:50. A single screen recording of https://pacto-pearl.vercel.app with
+voice-over. **One browser window is enough:** the demo runs in Judge Mode, which
+provisions both parties in the same window and lets you switch between them with
+a button. That is also the feature judges will use, so the video doubles as the
+instructions.
+
+> The Hackathon rules require the video to be under three minutes, publicly
+> visible on YouTube, and to show the project actually functioning.
 
 ---
 
@@ -19,70 +24,81 @@ So the buyer pays up front and hopes — or the supplier delivers and waits.
 PACTO turns that conversation into an agreement both sides can see, accept and
 pay against."
 
-## 0:25 – 0:50 · Create the agreement
+## 0:25 – 0:45 · Judge Mode
 
-> **On screen:** click "Explorar DEMO", then "Crear Pacto". Fill in a store
-> redesign for 25,000 MXN. Submit.
+> **On screen:** click "Modo Juez", then "Comenzar el recorrido". Land on the
+> pre-filled form. Point at the bar at the top.
 
-"No sign-up. One click and you are in a real, isolated session.
+"An agreement needs two parties — which usually makes a demo awkward. So PACTO
+provisions both.
 
-The buyer writes what they expect: the scope, what is excluded, and the amount.
+These are two genuinely separate users in the database, each with its own
+identity and its own row-level security. Switching sides here is the same as
+logging in as the other person. Nothing is faked, and nothing is relaxed."
 
-Notice the five steps across the top, and one clear next action. At every moment
-each party knows exactly whose turn it is."
+## 0:45 – 1:05 · Create the agreement
 
-## 0:50 – 1:15 · Invite the supplier
+> **On screen:** submit the pre-filled store redesign for 25,000 MXN. The Pacto
+> detail page opens.
 
-> **On screen:** generate the invitation link, copy it, paste it into the
-> incognito window. Show the preview, then join.
+"The buyer states the scope, what is excluded, and the amount.
 
-"To bring in the supplier, PACTO generates a secure link. Single use, expires in
-seven days, and only a cryptographic hash of it is ever stored — so not even an
-administrator could reconstruct it.
+Five steps across the top, and exactly one clear next action. At every moment
+each party knows whose turn it is."
 
-The supplier sees exactly what they are joining before they commit."
+## 1:05 – 1:25 · Invite the supplier
 
-> **On screen:** reload the link in a third window — it is already used.
+> **On screen:** "Generar enlace de invitación". Show the link, then "Abrir la
+> invitación como proveedor". Show the preview, then join.
 
-"And the link only works once."
+"To bring in the supplier, PACTO generates a secure link: single use, expires in
+seven days, and only a hash of it is ever stored — so not even an administrator
+could reconstruct it.
 
-## 1:15 – 1:40 · AI review
+The supplier sees exactly what they are joining before committing. Notice the bar
+at the top: I am now the supplier."
 
-> **On screen:** the AI analysis panel.
+## 1:25 – 1:50 · AI review
+
+> **On screen:** the "Análisis con IA" panel, with findings that quote the scope.
 
 "Before anyone commits, Claude reviews the scope and flags what is ambiguous,
 what obligations are implied, what dates are missing, and where the terms
-contradict themselves. Each finding quotes the exact wording that caused it.
+contradict themselves. Each finding quotes the exact wording that caused it, and
+every analysis is stored with a fingerprint of the text it judged.
 
 The AI advises. It never edits the agreement, never accepts on anyone's behalf,
 and never authorizes a payment. That is enforced in the database, not in the
 interface."
 
-## 1:40 – 2:05 · Both sides accept
+## 1:50 – 2:10 · Both sides accept
 
-> **On screen:** supplier accepts; buyer sees "1 of 2"; buyer accepts.
+> **On screen:** submit for review, accept as supplier, switch with "Actuar como
+> cliente", accept again. The badge turns to "Aceptado".
 
 "Both parties accept the same version, explicitly. Change a single word later and
 a new version is created that both have to accept again.
 
 Nobody is ever bound to text they did not approve."
 
-## 2:05 – 2:35 · Evidence, authorization, PayPal
+## 2:10 – 2:40 · Evidence, authorization, PayPal
 
-> **On screen:** supplier submits evidence; buyer reads it and authorizes; the
-> PayPal button; the PayPal approval screen; back to PACTO showing "Pagado".
+> **On screen:** switch to supplier, fill the evidence box, submit. Point out
+> that no authorize button exists here. Switch to buyer, read the evidence,
+> "Autorizar el pago de este hito". Then the PayPal button, the PayPal Sandbox
+> approval screen, and back to PACTO showing the milestone paid.
 
-"Now the money. The supplier submits evidence of what was delivered. The buyer
-reads it and authorizes — explicitly, as a human being.
+"Now the money. The supplier submits evidence of what was delivered — and look:
+as the supplier, there is no button to authorize my own payment. It is not
+hidden; the server would refuse it.
 
-Only then does PayPal appear. The buyer approves the payment inside PayPal, and
-PACTO records the capture against that specific milestone.
+I switch to the buyer, read the evidence, and authorize. Explicitly, as a human.
 
-The supplier cannot authorize their own payment. The buyer cannot authorize
-without evidence. Both rules live in Postgres, so a tampered form changes
-nothing."
+Only then does PayPal appear. The buyer approves inside PayPal Sandbox, and PACTO
+records the capture against that specific milestone. The amount comes from the
+database row, never from the form."
 
-## 2:35 – 2:45 · Close
+## 2:40 – 2:50 · Close
 
 > **On screen:** both confirm closure; scroll the activity trail.
 
@@ -98,11 +114,17 @@ That is PACTO."
 ## Production notes
 
 - Record at 1920×1080. Zoom the browser to 110% so text reads on a phone.
-- Keep the two windows visible together during sections 3, 5 and 6.
+- Judge Mode runs in one window, so there is nothing to arrange side by side.
 - Do not show any email address or identifier belonging to a real person.
-- **If PayPal credentials are not configured when you record**, replace 2:05–2:35
-  with the evidence and authorization steps only, and say: "With PayPal Sandbox
-  credentials configured, the buyer is taken to PayPal to approve the payment."
-  Do not stage a fake payment screen.
-- Same rule for the AI section: if the key is not configured, cut 1:15–1:40
-  rather than showing an invented analysis.
+- Before recording, run `pnpm check:integrations` and confirm PayPal and the AI
+  key answer. Recording first and discovering a "not activated" notice mid-take
+  wastes a session.
+- **If the PayPal credentials are not configured when you record**, replace
+  2:10–2:40 with the evidence and authorization steps only, and say: "With PayPal
+  Sandbox credentials configured, the buyer is taken to PayPal to approve the
+  payment." Do not stage a fake payment screen.
+- Same rule for the AI section: if the key is not configured, cut 1:25–1:50
+  rather than showing an invented analysis. Without both sections the video runs
+  about 2:05, which leaves room to dwell on the security demonstration at 2:10.
+- The spoken track is English, as the rules require; the interface is Spanish.
+  Say so once, early, so it reads as a deliberate market choice.
