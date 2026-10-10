@@ -8,8 +8,15 @@ export default async function PactoLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user } = await requireSession();
+  const { db, user } = await requireSession();
   const isDemoVisitor = Boolean(user.is_anonymous);
+  // Solo decide si se muestra el enlace. El acceso real lo siguen exigiendo
+  // /admin (sesión + rol, 404 si no) y las políticas RLS: esto no concede nada.
+  // Una sesión DEMO nunca es administradora, así que se evita la consulta.
+  const { data: profile } = isDemoVisitor
+    ? { data: null }
+    : await db.from("profiles").select("role").eq("id", user.id).maybeSingle();
+  const isAdmin = profile?.role === "admin";
   return (
     <div className="workspace">
       <aside className="sidebar">
@@ -20,6 +27,11 @@ export default async function PactoLayout({
         <nav>
           <Link href="/pactos">▦ Mis Pactos</Link>
           <Link href="/pactos/new">＋ Crear Pacto</Link>
+          {isAdmin && (
+            <Link className="nav-admin" href="/admin">
+              ◆ Panel de administración
+            </Link>
+          )}
         </nav>
         <div className="sidebar-foot">
           <span className="badge badge-dark">CÓMO FUNCIONA</span>

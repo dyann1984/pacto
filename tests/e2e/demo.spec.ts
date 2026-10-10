@@ -10,6 +10,13 @@ test("Explorar DEMO entra sin correo ni contraseña y llega a la app real", asyn
   await expect(page.getByText("Visitante DEMO")).toBeVisible();
 });
 
+test("un visitante DEMO no ve el acceso administrativo en el menú lateral", async ({ page }) => {
+  await page.goto("/demo");
+  await page.waitForURL(/\/pactos$/, { timeout: 15000 });
+  await expect(page.getByRole("link", { name: /Panel de administración/ })).toHaveCount(0);
+  await expect(page.locator(".sidebar")).toBeVisible();
+});
+
 test("un visitante DEMO no puede entrar a /admin", async ({ page }) => {
   await page.goto("/demo");
   await page.waitForURL(/\/pactos$/, { timeout: 15000 });

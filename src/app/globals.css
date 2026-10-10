@@ -393,6 +393,19 @@ textarea {
   background: #ffffff0e;
   color: #fff;
 }
+/* Acceso administrativo: dorado sobre el azul marino de la barra, separado del
+   resto para que se lea como un área distinta sin romper la identidad visual. */
+.sidebar nav a.nav-admin {
+  margin-top: 6px;
+  border-top: 1px solid #ffffff1f;
+  border-radius: 0 0 8px 8px;
+  padding-top: 16px;
+  color: var(--gold-light);
+}
+.sidebar nav a.nav-admin:hover {
+  background: #ce9a5022;
+  color: #fff;
+}
 .sidebar-foot {
   margin-top: auto;
   padding: 30px 14px 0;
