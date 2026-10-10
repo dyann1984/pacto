@@ -52,7 +52,7 @@ export function MilestoneBoard({
   paypalReady: boolean;
 }) {
   return (
-    <section className="card">
+    <section className="card" id="entregas">
       <div className="card-heading">
         <h2>Entregas y pagos</h2>
         <span className="badge badge-neutral">PayPal Sandbox</span>

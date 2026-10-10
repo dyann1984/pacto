@@ -13,6 +13,19 @@ import { createServerClient } from "@supabase/ssr";
  * `record_payment_result`, que solo acepta órdenes ya registradas por PACTO y
  * es idempotente.
  */
+
+/**
+ * Si PACTO puede registrar el resultado de un cobro. Una captura de PayPal es un hecho
+ * externo que solo afirma el servidor: la RPC la rechaza desde una sesión de usuario, así
+ * que sin esta clave un pago se cobraría en PayPal y no podría quedar registrado aquí.
+ * Por eso el pago se presenta como «no activado» en vez de dejarlo a medias.
+ */
+export function isSettlementConfigured() {
+  return Boolean(
+    process.env.SUPABASE_SERVICE_ROLE_KEY && process.env.NEXT_PUBLIC_SUPABASE_URL,
+  );
+}
+
 export function supabaseService() {
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!key || !process.env.NEXT_PUBLIC_SUPABASE_URL) return null;

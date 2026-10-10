@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { currentStepIndex, nextStep, type JourneyInput } from "../src/domain/journey";
+import {
+  currentStepIndex,
+  deliveryComplete,
+  journeySteps,
+  nextStep,
+  type JourneyInput,
+} from "../src/domain/journey";
 import { safeNextPath } from "../src/lib/next-path";
 
 const base: JourneyInput = {
@@ -38,18 +44,79 @@ describe("journey: one clear next step per party", () => {
     expect(waiting.body).toContain("1 de 2");
   });
 
-  it("asks for closure confirmation only after both accepted", () => {
-    const accepted = { ...base, hasSeller: true, agreementState: "ACCEPTED" as const, acceptances: 2 };
+  const accepted = {
+    ...base,
+    hasSeller: true,
+    agreementState: "ACCEPTED" as const,
+    acceptances: 2,
+  };
+
+  it("asks for closure confirmation once accepted and the delivery is authorized", () => {
+    // Sin información de entregas (acuerdo recién aceptado, o migración de hitos sin
+    // aplicar) el recorrido no condiciona el cierre.
     expect(nextStep(accepted).action).toBe("confirm");
     expect(nextStep({ ...accepted, iConfirmedClosure: true, closures: 1 }).waiting).toBe(true);
-    expect(currentStepIndex(accepted)).toBe(4);
+    expect(currentStepIndex(accepted)).toBe(5);
+  });
+
+  it("never offers the closure before the seller registered the delivery", () => {
+    const pending = {
+      ...accepted,
+      deliveries: { total: 1, awaitingEvidence: 1, awaitingApproval: 0 },
+    };
+    // El cliente espera; no se le ofrece cerrar algo que nadie ha entregado.
+    expect(nextStep(pending).action).toBe(null);
+    expect(nextStep(pending).waiting).toBe(true);
+    expect(nextStep(pending).title).toMatch(/Esperando la entrega/);
+    // Al proveedor se le pide la entrega, no el cierre.
+    const seller = nextStep({ ...pending, myRole: "SELLER" as const });
+    expect(seller.action).toBe("deliver");
+    expect(seller.title).toMatch(/Registra lo que entregaste/);
+    expect(currentStepIndex(pending)).toBe(4);
+  });
+
+  it("asks the buyer to authorize the delivery, and makes the seller wait", () => {
+    const submitted = {
+      ...accepted,
+      deliveries: { total: 1, awaitingEvidence: 0, awaitingApproval: 1 },
+    };
+    const buyer = nextStep(submitted);
+    expect(buyer.action).toBe("deliver");
+    expect(buyer.title).toMatch(/Revisa la entrega/);
+    const seller = nextStep({ ...submitted, myRole: "SELLER" as const });
+    expect(seller.action).toBeNull();
+    expect(seller.waiting).toBe(true);
+    expect(currentStepIndex(submitted)).toBe(4);
+  });
+
+  it("offers the closure once every milestone is authorized or paid", () => {
+    const ready = {
+      ...accepted,
+      deliveries: { total: 2, awaitingEvidence: 0, awaitingApproval: 0 },
+    };
+    expect(nextStep(ready).action).toBe("confirm");
+    expect(currentStepIndex(ready)).toBe(5);
+  });
+
+  it("deliveryComplete treats missing or empty delivery information as no gate", () => {
+    expect(deliveryComplete(undefined)).toBe(true);
+    expect(deliveryComplete({ total: 0, awaitingEvidence: 0, awaitingApproval: 0 })).toBe(true);
+    expect(deliveryComplete({ total: 1, awaitingEvidence: 1, awaitingApproval: 0 })).toBe(false);
+    expect(deliveryComplete({ total: 1, awaitingEvidence: 0, awaitingApproval: 1 })).toBe(false);
   });
 
   it("offers no action on closed, cancelled or example pactos", () => {
     expect(nextStep({ ...base, pactoStatus: "CLOSED" }).action).toBeNull();
-    expect(currentStepIndex({ ...base, pactoStatus: "CLOSED" })).toBe(5);
+    expect(currentStepIndex({ ...base, pactoStatus: "CLOSED" })).toBe(journeySteps.length);
     expect(nextStep({ ...base, pactoStatus: "CANCELLED" }).action).toBeNull();
     expect(nextStep({ ...base, myRole: null }).action).toBeNull();
+  });
+
+  it("the stepper shows the delivery stage, so no step is invisible to the user", () => {
+    expect(journeySteps).toContain("Entrega autorizada");
+    // Todo índice que devuelva currentStepIndex cabe en el stepper.
+    for (const input of [base, { ...base, hasSeller: true }, accepted])
+      expect(currentStepIndex(input)).toBeLessThanOrEqual(journeySteps.length);
   });
 
   it("a seller waits for the buyer when no seller slot is filled (defensive)", () => {
