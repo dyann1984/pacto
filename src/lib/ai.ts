@@ -55,6 +55,10 @@ export async function analyzeAgreement(
     }),
     signal: AbortSignal.timeout(TIMEOUT_MS),
   });
+  // 429 (límite de consumo) y 529 (proveedor saturado) no son una avería de PACTO ni un
+  // acuerdo imposible de analizar: se resuelven esperando. Confundirlos con un fallo
+  // genérico lleva a la persona a reintentar en bucle o a concluir que el módulo no sirve.
+  if (response.status === 429 || response.status === 529) throw new Error("PROVIDER_BUSY");
   if (!response.ok) throw new Error(`PROVIDER_HTTP_${response.status}`);
   const body = (await response.json()) as {
     stop_reason?: string;

@@ -92,6 +92,10 @@ const aiMessages: Record<string, { tone: "info" | "error"; text: string }> = {
     tone: "info",
     text: "Esta versión ya tiene el máximo de 3 análisis. Si cambian el acuerdo, podrán analizar la nueva versión.",
   },
+  saturado: {
+    tone: "info",
+    text: "El servicio de análisis está al límite en este momento. No es un fallo del acuerdo: espera un minuto y vuelve a intentarlo.",
+  },
   "not-configured": {
     tone: "info",
     text: "El análisis con IA todavía no está activado. Puedes continuar con el acuerdo con normalidad.",
@@ -131,6 +135,7 @@ const eventLabels: Record<string, string> = {
   PAYMENT_ORDER_CREATED: "Orden de pago creada en PayPal",
   PAYMENT_CAPTURED: "Pago completado en PayPal",
   PAYMENT_FAILED: "Pago no completado",
+  PAYMENT_REFUNDED: "Pago reembolsado por PayPal",
   PACTO_CREATED: "Pacto creado",
   PARTICIPANT_ADDED: "Se unió al Pacto",
   INVITATION_CREATED: "Invitación generada",

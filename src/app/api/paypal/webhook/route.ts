@@ -38,14 +38,19 @@ export async function POST(request: Request) {
       : event.resource?.supplementary_data?.related_ids?.order_id;
   if (!orderId) return NextResponse.json({ received: true }, { status: 200 });
 
+  // Un reembolso o una reversión devuelven el dinero al cliente: el hito deja de constar
+  // como pagado. Antes `REVERSED` se trataba como fallo y, al estar ya capturado, la RPC
+  // devolvía ALREADY_CAPTURED sin cambiar ni auditar nada.
+  const isRefund =
+    type === "PAYMENT.CAPTURE.REFUNDED" || type === "PAYMENT.CAPTURE.REVERSED";
   const status =
     type === "PAYMENT.CAPTURE.COMPLETED"
       ? "CAPTURED"
-      : type === "PAYMENT.CAPTURE.DENIED" || type === "PAYMENT.CAPTURE.REVERSED"
+      : type === "PAYMENT.CAPTURE.DENIED"
         ? "FAILED"
         : null;
   // Los avisos informativos (orden aprobada, por ejemplo) no cambian ningún estado.
-  if (!status) return NextResponse.json({ received: true }, { status: 200 });
+  if (!status && !isRefund) return NextResponse.json({ received: true }, { status: 200 });
 
   // Sin sesión de usuario, la única vía de escritura es el rol de servicio. Si no
   // está configurado, el aviso se reconoce pero no cambia nada: la captura normal
@@ -55,11 +60,16 @@ export async function POST(request: Request) {
     console.error(`[paypal] webhook ${type}: conciliación no configurada`);
     return NextResponse.json({ received: true }, { status: 200 });
   }
-  const { error } = await db.rpc("record_payment_result", {
-    p_order_id: orderId,
-    p_status: status,
-    p_capture_id: type === "PAYMENT.CAPTURE.COMPLETED" ? (event.resource?.id ?? null) : null,
-  });
+  const { error } = isRefund
+    ? await db.rpc("record_payment_refund", {
+        p_order_id: orderId,
+        p_refund_id: event.resource?.id ?? null,
+      })
+    : await db.rpc("record_payment_result", {
+        p_order_id: orderId,
+        p_status: status,
+        p_capture_id: type === "PAYMENT.CAPTURE.COMPLETED" ? (event.resource?.id ?? null) : null,
+      });
   if (error) {
     console.error(`[paypal] webhook ${type}: no se pudo registrar el resultado`);
     // 200 de todos modos: PayPal reintenta ante un error, y el retorno del

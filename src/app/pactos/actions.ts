@@ -339,8 +339,11 @@ export async function runAgreementAnalysis(form: FormData) {
       totalCents: agreement.total_cents,
       milestones: milestones ?? [],
     });
-  } catch {
-    redirect(`/pactos/${pactoId}?ai=failed`);
+  } catch (error) {
+    // Un límite de consumo o un proveedor saturado se arreglan esperando; decirlo evita
+    // que la persona reintente en bucle creyendo que el módulo está roto.
+    const busy = (error as Error)?.message === "PROVIDER_BUSY";
+    redirect(`/pactos/${pactoId}?ai=${busy ? "saturado" : "failed"}`);
   }
   if (outcome.status === "NOT_CONFIGURED")
     redirect(`/pactos/${pactoId}?ai=not-configured`);

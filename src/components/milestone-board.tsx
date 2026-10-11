@@ -82,6 +82,14 @@ export function MilestoneBoard({
             {row.capture_id && (
               <p className="fine-print">Comprobante de PayPal: {row.capture_id}</p>
             )}
+            {/* Un reembolso lo confirma PayPal, no PACTO. El hito vuelve a estar
+                autorizado y puede pagarse de nuevo; lo ocurrido queda en la actividad. */}
+            {row.payment_status === "REFUNDED" && (
+              <div className="notice notice-info" role="status">
+                PayPal reembolsó este pago. La entrega sigue autorizada y el hito puede
+                volver a pagarse. El detalle está en la actividad.
+              </div>
+            )}
             <p>{next.text}</p>
             {/* En Modo Juez: si el paso le toca a la otra parte, se indica el cambio. */}
             {!next.action && row.status !== "PAID" && (
