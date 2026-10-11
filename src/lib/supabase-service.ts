@@ -2,19 +2,6 @@ import "server-only";
 import { createServerClient } from "@supabase/ssr";
 
 /**
- * Cliente con rol de servicio. Único uso previsto: el webhook de PayPal, que
- * llega sin sesión de usuario y necesita registrar el resultado de un pago.
- *
- * Devuelve null si la clave no está configurada, para que quien lo use falle
- * cerrado en vez de operar a medias. La clave nunca sale de este módulo y jamás
- * se expone al navegador: no lleva el prefijo NEXT_PUBLIC_.
- *
- * Aunque este cliente puede saltarse RLS, la única función que ejecuta es
- * `record_payment_result`, que solo acepta órdenes ya registradas por PACTO y
- * es idempotente.
- */
-
-/**
  * Si PACTO puede registrar el resultado de un cobro. Una captura de PayPal es un hecho
  * externo que solo afirma el servidor: la RPC la rechaza desde una sesión de usuario, así
  * que sin esta clave un pago se cobraría en PayPal y no podría quedar registrado aquí.
@@ -26,6 +13,18 @@ export function isSettlementConfigured() {
   );
 }
 
+/**
+ * Cliente con rol de servicio. Lo usan el webhook de PayPal y el retorno del pagador,
+ * que necesitan registrar el resultado de un pago sin una sesión de usuario de por medio.
+ *
+ * Devuelve null si la clave no está configurada, para que quien lo use falle
+ * cerrado en vez de operar a medias. La clave nunca sale de este módulo y jamás
+ * se expone al navegador: no lleva el prefijo NEXT_PUBLIC_.
+ *
+ * Aunque este cliente puede saltarse RLS, la única función que ejecuta es
+ * `record_payment_result`, que solo acepta órdenes ya registradas por PACTO y
+ * es idempotente.
+ */
 export function supabaseService() {
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!key || !process.env.NEXT_PUBLIC_SUPABASE_URL) return null;
