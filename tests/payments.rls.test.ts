@@ -21,6 +21,21 @@ async function scalar<T>(id: string, query: string, params: unknown[] = []) {
   return rows[0] as T;
 }
 
+/**
+ * Escritura sin sesión de usuario: es lo que hacen el webhook firmado de PayPal y el
+ * retorno del pagador, con el rol de servicio. auth.uid() devuelve null.
+ */
+async function asService(query: string, params: unknown[] = []) {
+  await db.exec("reset role");
+  await db.query("select set_config('request.jwt.claim.sub','',false)");
+  return db.query(query, params);
+}
+
+async function serviceScalar<T>(query: string, params: unknown[] = []) {
+  const { rows } = await asService(query, params);
+  return rows[0] as T;
+}
+
 beforeAll(async () => {
   db = new PGlite();
   await db.exec(
@@ -37,6 +52,7 @@ beforeAll(async () => {
     "supabase/migrations/202610100001_demo_example.sql",
     "supabase/migrations/202610110001_invitations.sql",
     "supabase/migrations/202610120001_milestones_payments.sql",
+    "supabase/migrations/202610130001_closure_requires_delivery.sql",
   ]) {
     await db.exec(await readFile(file, "utf8"));
   }
@@ -105,6 +121,15 @@ describe.sequential("milestones, evidence and PayPal sandbox payments", () => {
     );
   });
 
+  it("only the party that created the order can abandon it", async () => {
+    // Para el proveedor y para un extraño la orden del cliente no existe: ni la cancelan
+    // ni la marcan fallida, aunque conozcan el order_id (lo ven en el tablero).
+    for (const outsider of [SELLER, INTRUDER])
+      for (const status of ["CANCELLED", "FAILED"])
+        await expect(asUser(outsider, "select public.record_payment_result($1,$2)", ["ORDER-1", status])).rejects.toThrow("NOT_FOUND");
+    expect((await scalar<{ status: string }>(BUYER, "select status from public.payments where order_id=$1", ["ORDER-1"])).status).toBe("CREATED");
+  });
+
   it("a cancelled order frees the milestone for a new attempt", async () => {
     expect((await scalar<{ r: string }>(BUYER, "select public.record_payment_result($1,$2) r", ["ORDER-1", "CANCELLED"])).r).toBe("CANCELLED");
     await asUser(BUYER, "select public.record_payment_order($1,$2,$3)", [milestone, "ORDER-3", 250000]);
@@ -113,17 +138,39 @@ describe.sequential("milestones, evidence and PayPal sandbox payments", () => {
     ).toBe(2);
   });
 
-  it("capture marks the milestone paid and is idempotent", async () => {
-    expect((await scalar<{ r: string }>(BUYER, "select public.record_payment_result($1,$2,$3) r", ["ORDER-3", "CAPTURED", "CAPTURE-3"])).r).toBe(
+  // Una captura es un hecho externo: solo la afirma el servidor tras verificarla en
+  // PayPal. Antes, cualquier participante con sesión podía declararla y marcar el hito
+  // como pagado sin que PayPal hubiera cobrado nada.
+  it("nobody can declare a capture from a user session, not even the payer", async () => {
+    await expect(asUser(SELLER, "select public.record_payment_result($1,$2,$3)", ["ORDER-3", "CAPTURED", "CAPTURE-FALSA"])).rejects.toThrow(
+      "NOT_FOUND",
+    );
+    await expect(asUser(BUYER, "select public.record_payment_result($1,$2,$3)", ["ORDER-3", "CAPTURED", "CAPTURE-FALSA"])).rejects.toThrow(
+      "CAPTURE_NOT_ALLOWED",
+    );
+    // El intento no deja rastro de pago: el hito sigue sin pagar.
+    expect((await scalar<{ status: string }>(BUYER, "select status from public.milestones where id=$1", [milestone])).status).toBe("APPROVED");
+    expect((await scalar<{ status: string }>(BUYER, "select status from public.payments where order_id=$1", ["ORDER-3"])).status).toBe("CREATED");
+  });
+
+  it("the server (service role, no session) records the capture, and it is idempotent", async () => {
+    expect((await serviceScalar<{ r: string }>("select public.record_payment_result($1,$2,$3) r", ["ORDER-3", "CAPTURED", "CAPTURE-3"])).r).toBe(
       "CAPTURED",
     );
     expect((await scalar<{ status: string }>(BUYER, "select status from public.milestones where id=$1", [milestone])).status).toBe("PAID");
+    // El actor auditado es quien creó la orden, no un usuario nulo.
+    expect(
+      (await scalar<{ actor_id: string }>(BUYER, "select actor_id from public.audit_events where pacto_id=$1 and event_type='PAYMENT_CAPTURED'", [pacto]))
+        .actor_id,
+    ).toBe(BUYER);
     // Repetir la captura (webhook duplicado) no paga dos veces ni añade auditoría.
     const before = (await scalar<{ n: number }>(BUYER, "select count(*)::int n from public.audit_events where pacto_id=$1", [pacto])).n;
-    expect((await scalar<{ r: string }>(BUYER, "select public.record_payment_result($1,$2,$3) r", ["ORDER-3", "CAPTURED", "CAPTURE-3"])).r).toBe(
+    expect((await serviceScalar<{ r: string }>("select public.record_payment_result($1,$2,$3) r", ["ORDER-3", "CAPTURED", "CAPTURE-3"])).r).toBe(
       "ALREADY_CAPTURED",
     );
     expect((await scalar<{ n: number }>(BUYER, "select count(*)::int n from public.audit_events where pacto_id=$1", [pacto])).n).toBe(before);
+    // Y tampoco se puede revertir a FAILED después de capturado.
+    expect((await serviceScalar<{ r: string }>("select public.record_payment_result($1,$2) r", ["ORDER-3", "FAILED"])).r).toBe("ALREADY_CAPTURED");
   });
 
   it("a paid milestone accepts no further evidence or approval", async () => {

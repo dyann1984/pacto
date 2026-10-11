@@ -97,6 +97,10 @@ test("the two judge identities are genuinely different users, isolated by RLS", 
   await expect(page.getByText("Actúas como proveedor")).toBeVisible();
   const asSeller = await page.goto(`/pactos/${pactoId}`);
   expect(asSeller?.status()).toBe(404);
+  // El 404 explica la sesión propia sin revelar nada del Pacto: sin esto, un evaluador
+  // leía «Pacto no disponible» y concluía que PACTO estaba roto.
+  await expect(page.getByText("Estás en Modo Juez, con dos identidades DEMO")).toBeVisible();
+  await expect(page.getByText(/cambia de identidad en la barra del Modo Juez/)).toBeVisible();
 
   // Y un visitante DEMO ajeno tampoco lo ve.
   const other = await browser.newContext();
@@ -104,6 +108,9 @@ test("the two judge identities are genuinely different users, isolated by RLS", 
   await otherPage.goto("/demo");
   await otherPage.waitForURL(/\/pactos$/, { timeout: 15000 });
   expect((await otherPage.goto(`/pactos/${pactoId}`))?.status()).toBe(404);
+  // A una sesión DEMO se le explica el aislamiento, no el recurso.
+  await expect(otherPage.getByText("Estás en una sesión DEMO temporal y privada")).toBeVisible();
+  await expect(otherPage.getByText("Rediseño de tienda en línea")).toHaveCount(0);
   await other.close();
 });
 

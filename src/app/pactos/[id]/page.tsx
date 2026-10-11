@@ -5,6 +5,7 @@ import { requireSession } from "@/lib/session";
 import { isAnalysisConfigured } from "@/lib/ai";
 import { InviteSeller } from "@/components/invite-seller";
 import { isPayPalConfigured } from "@/lib/paypal";
+import { isSettlementConfigured } from "@/lib/supabase-service";
 import { MilestoneBoard, type MilestoneRow } from "@/components/milestone-board";
 import { JudgeRoleNote } from "@/components/judge-role-note";
 import { SubmitButton } from "@/components/submit-button";
@@ -66,6 +67,10 @@ const statusMessages: Record<string, { tone: "info" | "error"; text: string }> =
     tone: "error",
     text: "El cierre requiere que ambas partes hayan aceptado el acuerdo.",
   },
+  DELIVERY_REQUIRED: {
+    tone: "error",
+    text: "Todavía no se puede cerrar: falta que el proveedor registre la entrega y que el cliente la autorice en «Entregas y pagos».",
+  },
   confirmed: {
     tone: "info",
     text: "Tu confirmación de cierre quedó registrada. Falta la confirmación de la otra parte.",
@@ -99,6 +104,14 @@ const paymentMessages: Record<string, { tone: "info" | "error"; text: string }> 
   pagado: { tone: "info", text: "Pago registrado en PayPal Sandbox. El comprobante quedó en la actividad." },
   cancelado: { tone: "info", text: "Cancelaste el pago en PayPal. El hito sigue autorizado y puedes intentarlo de nuevo." },
   rechazado: { tone: "error", text: "PayPal no completó el pago. No se cobró nada; puedes intentarlo de nuevo." },
+  conciliacion: {
+    tone: "error",
+    text: "PayPal completó el cobro, pero PACTO no pudo registrarlo todavía. No vuelvas a pagar: el aviso firmado de PayPal lo conciliará y el hito aparecerá como pagado.",
+  },
+  CAPTURE_NOT_ALLOWED: {
+    tone: "error",
+    text: "Un cobro solo lo registra PACTO después de verificarlo en PayPal. No se puede marcar un hito como pagado desde el navegador.",
+  },
   proveedor: { tone: "error", text: "No se pudo contactar con PayPal. Intenta de nuevo en unos minutos." },
   "no-configurado": { tone: "info", text: "El pago con PayPal todavía no está activado en esta versión." },
   EVIDENCE_REQUIRED: { tone: "error", text: "Falta la evidencia del proveedor antes de autorizar el pago." },
@@ -251,6 +264,13 @@ export default async function Center({
     acceptances: acceptances.length,
     iConfirmedClosure: closures.some((c) => c.user_id === userId),
     closures: closures.length,
+    // Solo el acuerdo aceptado trae hitos (milestone_board los filtra): mientras no lo
+    // esté, `total: 0` deja el recorrido sin condicionar.
+    deliveries: {
+      total: milestones.length,
+      awaitingEvidence: milestones.filter((m) => m.status === "PENDING").length,
+      awaitingApproval: milestones.filter((m) => m.status === "EVIDENCE_SUBMITTED").length,
+    },
   };
   const step = nextStep(journey);
   const stepIndex = currentStepIndex(journey);
@@ -258,7 +278,9 @@ export default async function Center({
   const aiMessage = ai ? aiMessages[ai] ?? aiMessages.failed : null;
   const paymentMessage = pago ? paymentMessages[pago] ?? paymentMessages.failed : null;
   const aiReady = isAnalysisConfigured();
-  const paypalReady = isPayPalConfigured();
+  // «Listo» incluye poder registrar el resultado: ofrecer pagar sin conciliación dejaría
+  // un cobro real en PayPal sin constancia en PACTO.
+  const paypalReady = isPayPalConfigured() && isSettlementConfigured();
 
   function fields(operation: string) {
     return (
@@ -349,6 +371,11 @@ export default async function Center({
               Las invitaciones se están habilitando. Vuelve a intentarlo en unos minutos.
             </div>
           ))}
+        {isActive && step.action === "deliver" && (
+          <a className="button" href="#entregas">
+            Ir a Entregas y pagos ↓
+          </a>
+        )}
         {isActive && step.action === "submit" && (
           <form action={updatePacto}>
             {fields("submit")}

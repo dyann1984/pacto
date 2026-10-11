@@ -5,6 +5,20 @@ import type { AgreementState, Role } from "./foundation";
 
 export type PactoStatus = "ACTIVE" | "CLOSED" | "CANCELLED";
 
+/**
+ * Avance de las entregas del acuerdo aceptado. El cierre no puede ocurrir antes de que
+ * cada hito tenga la evidencia del proveedor y la autorización del cliente: la base lo
+ * exige (`DELIVERY_REQUIRED`) y esto solo sirve para contarlo antes de que falle.
+ *
+ * `total: 0` significa «sin información de entregas» (el acuerdo no está aceptado todavía,
+ * o la migración de hitos no está aplicada): entonces no se condiciona nada.
+ */
+export interface DeliveryProgress {
+  total: number;
+  awaitingEvidence: number; // hitos sin evidencia del proveedor
+  awaitingApproval: number; // con evidencia, pendientes de que el cliente autorice
+}
+
 export interface JourneyInput {
   pactoStatus: PactoStatus;
   agreementState: AgreementState;
@@ -15,9 +29,16 @@ export interface JourneyInput {
   acceptances: number;
   iConfirmedClosure: boolean;
   closures: number;
+  deliveries?: DeliveryProgress;
 }
 
-export type JourneyAction = "invite" | "submit" | "accept" | "confirm";
+export type JourneyAction = "invite" | "submit" | "accept" | "deliver" | "confirm";
+
+/** Si la entrega ya cumple los requisitos para poder confirmar el cierre. */
+export function deliveryComplete(deliveries?: DeliveryProgress) {
+  if (!deliveries || deliveries.total === 0) return true;
+  return deliveries.awaitingEvidence === 0 && deliveries.awaitingApproval === 0;
+}
 
 export interface NextStep {
   title: string;
@@ -31,6 +52,7 @@ export const journeySteps = [
   "Proveedor unido",
   "En revisión",
   "Aceptado por ambas partes",
+  "Entrega autorizada",
   "Cierre confirmado",
 ] as const;
 
@@ -58,7 +80,8 @@ export function currentStepIndex(input: JourneyInput) {
   if (!input.hasSeller) return 1;
   if (input.agreementState === "DRAFT") return 2;
   if (input.agreementState === "REVIEW") return 3;
-  return 4;
+  if (!deliveryComplete(input.deliveries)) return 4;
+  return 5;
 }
 
 export function nextStep(input: JourneyInput): NextStep {
@@ -102,14 +125,43 @@ export function nextStep(input: JourneyInput): NextStep {
           waiting: false,
         };
 
+  // Antes de poder cerrar hay que cumplir la entrega. Ofrecer el cierre aquí era lo que
+  // dejaba a la vista un Pacto «cerrado» con la entrega eternamente pendiente.
+  if (!deliveryComplete(input.deliveries)) {
+    const { awaitingEvidence } = input.deliveries!;
+    if (awaitingEvidence > 0)
+      return input.myRole === "SELLER"
+        ? {
+            title: "Registra lo que entregaste",
+            body: "Describe la entrega en «Entregas y pagos». El cliente la revisará y, si está conforme, la autorizará. Hasta entonces el Pacto no se puede cerrar.",
+            action: "deliver",
+            waiting: false,
+          }
+        : waiting(
+            "Esperando la entrega del proveedor",
+            "El proveedor todavía no ha descrito qué entregó. Cuando lo haga, podrás revisarlo y autorizarlo en «Entregas y pagos».",
+          );
+    return input.myRole === "BUYER"
+      ? {
+          title: "Revisa la entrega y autorízala",
+          body: "El proveedor ya describió lo entregado. Revísalo en «Entregas y pagos» y autorízalo si está conforme a lo acordado. Autorizar no ejecuta ningún pago.",
+          action: "deliver",
+          waiting: false,
+        }
+      : waiting(
+          "Esperando que el cliente revise tu entrega",
+          "Presentaste la evidencia. El cliente debe revisarla y autorizarla antes de que el Pacto pueda cerrarse.",
+        );
+  }
+
   return input.iConfirmedClosure
     ? waiting(
         "Esperando que la otra parte confirme el cierre",
         `Ya confirmaste el cierre (${input.closures} de 2). El Pacto se cierra cuando ambas partes confirman.`,
       )
     : {
-        title: "Confirma el cierre cuando se cumpla la entrega",
-        body: "Confirma solo cuando el trabajo se haya entregado según lo acordado. El Pacto se cierra cuando ambas partes confirman; no libera pagos.",
+        title: "Confirma el cierre",
+        body: "La entrega ya está autorizada por el cliente. El Pacto se cierra cuando ambas partes confirman; cerrar no libera ningún pago.",
         action: "confirm",
         waiting: false,
       };

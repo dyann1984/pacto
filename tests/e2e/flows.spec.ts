@@ -66,6 +66,25 @@ test("seller B accepts; buyer A accepts; agreement becomes Aceptado", async () =
   await expectBadge(pageB, /Aceptado/);
 });
 
+// El cierre exige entrega cumplida: el servidor lo rechaza y la interfaz no lo ofrece.
+test("the closure is not offered, nor accepted, before the delivery is authorized", async () => {
+  await pageA.goto(`/pactos/${pactoId}`);
+  await expect(pageA.getByRole("button", { name: "Confirmar cierre" })).toHaveCount(0);
+  await expect(pageA.getByText("Esperando la entrega del proveedor")).toBeVisible();
+
+  await pageB.goto(`/pactos/${pactoId}`);
+  await expect(pageB.getByRole("heading", { name: /Registra lo que entregaste/ })).toBeVisible();
+  await pageB.locator('textarea[name="evidence"]').fill("Entrega realizada y revisada con el cliente en la prueba E2E.");
+  await pageB.getByRole("button", { name: "Presentar evidencia" }).click();
+  await expect(pageB.getByText("Evidencia presentada. El cliente la revisará")).toBeVisible();
+
+  // Con evidencia pero sin autorizar, sigue sin poder cerrarse.
+  await pageA.goto(`/pactos/${pactoId}`);
+  await expect(pageA.getByRole("button", { name: "Confirmar cierre" })).toHaveCount(0);
+  await pageA.getByRole("button", { name: "Autorizar el pago de este hito" }).click();
+  await expect(pageA.getByText("Hito autorizado")).toBeVisible();
+});
+
 test("both parties confirm closure and the pacto ends CLOSED after a reload", async () => {
   await pageA.goto(`/pactos/${pactoId}`);
   await pageA.locator('textarea[name="note"]').fill("Entrega verificada en E2E");

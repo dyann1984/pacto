@@ -96,6 +96,15 @@ no se puede verificar no debe cambiar el estado de un pago.
    `PAYMENT.CAPTURE.COMPLETED`, `PAYMENT.CAPTURE.DENIED` y `PAYMENT.CAPTURE.REFUNDED`.
 4. Guarda. PayPal muestra entonces un **Webhook ID**; ese es el valor.
 
+> **Reembolsos: no implementados.** PACTO verifica la firma de
+> `PAYMENT.CAPTURE.REFUNDED` y responde 200, pero no revierte el hito: no existe un
+> estado `REFUNDED` en `payments` ni una RPC que lo registre. Conviene suscribir el
+> evento igualmente para no perder el aviso el día que se implemente, pero hoy un
+> reembolso hecho en PayPal deja el hito como `PAID` en PACTO. Lo mismo ocurre con
+> `PAYMENT.CAPTURE.REVERSED` después de una captura: `record_payment_result` devuelve
+> `ALREADY_CAPTURED` y no cambia nada. Ambos casos están fijados en
+> `tests/paypal-webhook.test.ts` y `tests/payments.rls.test.ts`.
+
 ```ini
 PAYPAL_WEBHOOK_ID=...
 ```
@@ -122,14 +131,24 @@ maestra.
 SUPABASE_SERVICE_ROLE_KEY=...
 ```
 
-En Vercel solo hace falta si se activan los webhooks de PayPal, y siempre como
-variable **Sensitive**.
+En Vercel es **obligatoria para activar los pagos**, y siempre como variable
+**Sensitive**.
+
+> **Obligatoria desde `202610130001_closure_requires_delivery.sql`.** Un cobro es un
+> hecho externo: la RPC `record_payment_result` ya no acepta un `CAPTURED` declarado
+> desde una sesión de usuario, porque eso permitía marcar un hito como pagado sin que
+> PayPal hubiera cobrado nada. La captura solo la afirma el servidor, y para escribirla
+> sin sesión necesita esta clave. Sin ella, PACTO no ofrece el botón de pagar y muestra
+> «el pago con PayPal todavía no está activado»: es preferible a cobrar en PayPal y no
+> poder registrarlo.
 
 Para qué sirve en PACTO:
 
 - `scripts/provision-demo-admin.mjs`: crea las dos cuentas DEMO ya confirmadas,
   sin depender del envío de correo. Desbloquea las **9 pruebas E2E** de
   `tests/e2e/flows.spec.ts` que hoy se omiten.
+- `src/app/pactos/[id]/pago/page.tsx`: registra la captura que el servidor acaba de
+  verificar contra PayPal, en el retorno del pagador.
 - `src/app/api/paypal/webhook/route.ts`: escribe el resultado del pago cuando el
   aviso llega de PayPal y no hay ninguna sesión de usuario en juego.
 

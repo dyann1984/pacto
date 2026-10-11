@@ -10,6 +10,8 @@ const INVITATIONS = "supabase/migrations/202610110001_invitations.sql";
 const ROLLBACK = "supabase/rollback/202610110001_invitations.down.sql";
 const PAYMENTS = "supabase/migrations/202610120001_milestones_payments.sql";
 const PAYMENTS_ROLLBACK = "supabase/rollback/202610120001_milestones_payments.down.sql";
+const DELIVERY = "supabase/migrations/202610130001_closure_requires_delivery.sql";
+const DELIVERY_ROLLBACK = "supabase/rollback/202610130001_closure_requires_delivery.down.sql";
 const PREFLIGHT ="supabase/preflight.sql";
 
 const databases: PGlite[] = [];
@@ -72,7 +74,44 @@ describe("migration sequencing and safety", () => {
 
     await db.exec(await readFile(PAYMENTS, "utf8"));
     const afterPayments = await preflight(db);
-    expect(Object.values(afterPayments).every((ok) => ok === true)).toBe(true);
+    expect(afterPayments["pagos: tabla payments"]).toBe(true);
+    expect(afterPayments["cierre: confirm_closure exige entrega cumplida"]).toBe(false);
+
+    await db.exec(await readFile(DELIVERY, "utf8"));
+    const afterDelivery = await preflight(db);
+    expect(Object.values(afterDelivery).every((ok) => ok === true)).toBe(true);
+  });
+
+  it("refuses the delivery migration before payments, and a re-run aborts", async () => {
+    const db = await freshDatabase();
+    for (const file of [FOUNDATION, CLOSURE, ROLES, DEMO, INVITATIONS]) await db.exec(await readFile(file, "utf8"));
+    await expect(db.exec(await readFile(DELIVERY, "utf8"))).rejects.toThrow("PREREQUISITE_MISSING");
+    await db.exec("rollback");
+    expect((await preflight(db))["cierre: confirm_closure exige entrega cumplida"]).toBe(false);
+    await db.exec(await readFile(PAYMENTS, "utf8"));
+    await db.exec(await readFile(DELIVERY, "utf8"));
+    await expect(db.exec(await readFile(DELIVERY, "utf8"))).rejects.toThrow("MIGRATION_ALREADY_APPLIED");
+    await db.exec("rollback");
+    const state = await preflight(db);
+    expect(state["cierre: confirm_closure exige entrega cumplida"]).toBe(true);
+    expect(state["pagos: la captura solo la afirma el servidor"]).toBe(true);
+  });
+
+  it("the delivery rollback restores the previous rules and can be re-applied", async () => {
+    const db = await freshDatabase();
+    for (const file of [FOUNDATION, CLOSURE, ROLES, DEMO, INVITATIONS, PAYMENTS, DELIVERY]) await db.exec(await readFile(file, "utf8"));
+    // Revertir solo cambia el cuerpo de las dos funciones: ningún dato se pierde.
+    const buyer = "11111111-1111-4111-8111-111111111111";
+    await db.query("insert into auth.users(id,email) values($1,'a@example.com')", [buyer]);
+    await db.query("select set_config('request.jwt.claim.sub',$1,false)", [buyer]);
+    const pacto = (await db.query<{ id: string }>("select public.create_pacto('Con reglas de entrega','Alcance para probar la reversión de la regla',1000) id")).rows[0].id;
+    await db.exec(await readFile(DELIVERY_ROLLBACK, "utf8"));
+    const reverted = await preflight(db);
+    expect(reverted["cierre: confirm_closure exige entrega cumplida"]).toBe(false);
+    expect(reverted["pagos: la captura solo la afirma el servidor"]).toBe(false);
+    expect((await db.query("select id from public.pactos where id=$1", [pacto])).rows).toHaveLength(1);
+    await db.exec(await readFile(DELIVERY, "utf8"));
+    expect((await preflight(db))["cierre: confirm_closure exige entrega cumplida"]).toBe(true);
   });
 
   it("refuses the payments migration before invitations, and a re-run aborts", async () => {
@@ -101,6 +140,19 @@ describe("migration sequencing and safety", () => {
     expect((await db.query("select id from public.milestones")).rows.length).toBeGreaterThan(0);
     await db.exec(await readFile(PAYMENTS, "utf8"));
     expect((await preflight(db))["pagos: tabla payments"]).toBe(true);
+  });
+
+  it("refuses the payments rollback while the delivery rule still depends on it", async () => {
+    const db = await freshDatabase();
+    for (const file of [FOUNDATION, CLOSURE, ROLES, DEMO, INVITATIONS, PAYMENTS, DELIVERY]) await db.exec(await readFile(file, "utf8"));
+    // Quitar milestones.status antes de revertir la regla dejaría confirm_closure roto.
+    await expect(db.exec(await readFile(PAYMENTS_ROLLBACK, "utf8"))).rejects.toThrow("ROLLBACK_OUT_OF_ORDER");
+    await db.exec("rollback");
+    expect((await preflight(db))["pagos: tabla payments"]).toBe(true);
+    // En el orden correcto sí se puede revertir todo.
+    await db.exec(await readFile(DELIVERY_ROLLBACK, "utf8"));
+    await db.exec(await readFile(PAYMENTS_ROLLBACK, "utf8"));
+    expect((await preflight(db))["pagos: tabla payments"]).toBe(false);
   });
 
   it("refuses to run the invitations migration before demo-example, and a re-run aborts", async () => {
@@ -211,6 +263,7 @@ describe("migration sequencing and safety", () => {
     await db.exec("rollback");
     await db.exec(await readFile(INVITATIONS, "utf8"));
     await db.exec(await readFile(PAYMENTS, "utf8"));
+    await db.exec(await readFile(DELIVERY, "utf8"));
     const state = await preflight(db);
     expect(Object.values(state).every((ok) => ok === true)).toBe(true);
   });

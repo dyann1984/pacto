@@ -7,6 +7,7 @@ import { createPactoSchema } from "@/domain/foundation";
 import { analyzeAgreement } from "@/lib/ai";
 import { requestOrigin } from "@/lib/origin";
 import { createOrder, isPayPalConfigured } from "@/lib/paypal";
+import { isSettlementConfigured } from "@/lib/supabase-service";
 
 // Códigos de negocio que levanta PostgreSQL; cualquier otro error se reporta como "failed".
 const knownActionCodes = [
@@ -14,6 +15,7 @@ const knownActionCodes = [
   "PACTO_NOT_ACTIVE",
   "INVALID_INPUT",
   "INVALID_STATE",
+  "DELIVERY_REQUIRED",
   "NOT_FOUND",
 ] as const;
 
@@ -211,6 +213,7 @@ const milestoneErrors = [
   "APPROVAL_REQUIRED",
   "AMOUNT_MISMATCH",
   "PAYMENT_ALREADY_OPEN",
+  "CAPTURE_NOT_ALLOWED",
   "INVALID_TRANSITION",
   "INVALID_INPUT",
   "INVALID_STATE",
@@ -257,7 +260,10 @@ export async function startPayment(form: FormData) {
   const { db } = await requireSession();
   const pactoId = z.uuid().parse(form.get("pactoId"));
   const milestoneId = z.uuid().parse(form.get("milestoneId"));
-  if (!isPayPalConfigured()) redirect(`/pactos/${pactoId}?pago=no-configurado`);
+  // No se abre un cobro que después no se podría registrar: sin conciliación, PayPal
+  // cobraría y el hito quedaría sin constancia. Ver isSettlementConfigured.
+  if (!isPayPalConfigured() || !isSettlementConfigured())
+    redirect(`/pactos/${pactoId}?pago=no-configurado`);
 
   const { data: milestone, error: milestoneError } = await db
     .from("milestones")
