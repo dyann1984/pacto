@@ -25,11 +25,15 @@ const fail = (m) => { broken++; console.log(`  ROTO     ${m}`); };
 const absent = (m) => { missing++; console.log(`  FALTA    ${m}`); };
 const info = (m) => console.log(`           ${m}`);
 
-/** Describe una variable sin revelarla. */
+/**
+ * Describe una variable sin revelarla. El prefijo solo se muestra en identificadores
+ * públicos (clave publicable, Client ID); de un secreto, ni un carácter.
+ */
+const PUBLIC_PREFIX = new Set(["NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "PAYPAL_CLIENT_ID", "PAYPAL_WEBHOOK_ID"]);
 function shape(name) {
   const v = process.env[name];
   if (!v) return null;
-  return `${v.length} caracteres, empieza por "${v.slice(0, 4)}…"`;
+  return PUBLIC_PREFIX.has(name) ? `${v.length} caracteres, empieza por "${v.slice(0, 4)}…"` : `${v.length} caracteres`;
 }
 
 function section(title) {

@@ -8,11 +8,15 @@
 >   con `REFUNDED`, `record_payment_refund` ejecutable solo por `service_role`, RLS en las 12
 >   tablas, 27 políticas y datos intactos. Una segunda ejecución aborta con
 >   `MIGRATION_ALREADY_APPLIED`.
-> - **Variables de Vercel (Production):** `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET` y
->   `PAYPAL_WEBHOOK_ID` existen pero son **marcadores de posición** (11 caracteres; PayPal
->   Sandbox responde `401 invalid_client`). Faltan `SUPABASE_SERVICE_ROLE_KEY` y
->   `ANTHROPIC_API_KEY`. No añadir la clave de servicio hasta tener credenciales Sandbox
->   válidas: con ella el botón de pago aparecería y fallaría.
+> - **Variables de Vercel (Production):** las credenciales PayPal Sandbox se guardaron con
+>   `scripts/set-paypal-sandbox.mjs`, que las valida contra PayPal (token, propiedad del
+>   webhook `0BY007329M302654B`, URL y eventos) antes de escribirlas.
+> - **Ojo:** `vercel env pull` no devuelve las variables *sensibles*: entrega un marcador
+>   fijo de 11 caracteres, así que no sirve para comparar ni para probar sus valores.
+>   Para validarlas, usar `.env.local` (mismos valores) o el comportamiento en producción.
+> - Suscripciones del webhook completadas con `scripts/paypal-webhook-events.mjs --apply`:
+>   faltaban `PAYMENT.CAPTURE.REFUNDED/REVERSED/DECLINED` (solo había los `PAYMENT.SALE.*`
+>   de la API v1, que una orden v2 nunca emite).
 
 **Estado al 10 de octubre de 2026.** El proyecto está desplegado y accesible en
 https://pacto-pearl.vercel.app, vinculado al proyecto Vercel `pacto`
