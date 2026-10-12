@@ -546,6 +546,9 @@ textarea {
   display: grid;
   grid-template-columns: 1.3fr 1fr;
   gap: 24px;
+  /* Cada tarjeta mide lo que su contenido: sin esto, «Entregas y pagos» se estiraba hasta
+     la altura del análisis con IA de su fila y quedaba un gran hueco en blanco. */
+  align-items: start;
 }
 .card-heading {
   display: flex;
@@ -1014,7 +1017,8 @@ summary {
 /* Recorrido guiado: pasos y panel "Qué sigue" */
 .stepper {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  /* Seis etapas desde que «Entrega autorizada» forma parte del recorrido. */
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 8px;
   list-style: none;
   margin: 0 0 20px;
@@ -1092,6 +1096,11 @@ summary {
   display: grid;
   gap: 12px;
   margin-top: 20px;
+}
+@media (max-width: 1280px) {
+  .stepper {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 @media (max-width: 900px) {
   .stepper {
