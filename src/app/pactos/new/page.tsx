@@ -67,7 +67,8 @@ export default async function Create({
           </label>
           <div className="notice notice-info">
             Después de crearlo podrás invitar a tu proveedor con un enlace seguro.
-            Ambos revisan y aceptan la misma versión. PACTO no ejecuta pagos.
+            Ambos revisan y aceptan la misma versión. Crear el acuerdo no cobra nada:
+            solo se paga con PayPal un hito que el cliente haya autorizado.
           </div>
           <button className="button">Crear acuerdo →</button>
         </form>

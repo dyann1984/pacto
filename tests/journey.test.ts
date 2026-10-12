@@ -98,6 +98,27 @@ describe("journey: one clear next step per party", () => {
     expect(currentStepIndex(ready)).toBe(5);
   });
 
+  it("with PayPal active, tells the buyer to pay before closing, without blocking the closure", () => {
+    // La base rechaza pagos en un Pacto cerrado: cerrar primero dejaba el pago imposible.
+    const authorized = {
+      ...accepted,
+      deliveries: { total: 1, awaitingEvidence: 0, awaitingApproval: 0, awaitingPayment: 1 },
+      paymentsEnabled: true,
+    };
+    const buyer = nextStep(authorized);
+    expect(buyer.payFirst).toBe(true);
+    expect(buyer.action).toBe("confirm");
+    expect(buyer.body).toMatch(/ya no admite pagos/);
+    // El proveedor no paga: a él se le sigue ofreciendo confirmar el cierre.
+    expect(nextStep({ ...authorized, myRole: "SELLER" as const }).payFirst).toBeUndefined();
+    // Sin PayPal activo no hay nada que pagar: no se le pide al cliente.
+    expect(nextStep({ ...authorized, paymentsEnabled: false }).payFirst).toBeUndefined();
+    // Pagado (ningún hito pendiente de pago): el cierre de siempre.
+    const paid = { ...authorized, deliveries: { ...authorized.deliveries, awaitingPayment: 0 } };
+    expect(nextStep(paid).payFirst).toBeUndefined();
+    expect(nextStep(paid).title).toBe("Confirma el cierre");
+  });
+
   it("deliveryComplete treats missing or empty delivery information as no gate", () => {
     expect(deliveryComplete(undefined)).toBe(true);
     expect(deliveryComplete({ total: 0, awaitingEvidence: 0, awaitingApproval: 0 })).toBe(true);

@@ -68,17 +68,14 @@ describe("webhook de PayPal: la firma es la única autorización", () => {
     });
   });
 
-  it("marks a denied or reversed capture as failed, without a capture id", async () => {
+  it("marks a denied capture as failed, without a capture id", async () => {
     verifyWebhook.mockResolvedValue(true);
-    for (const type of ["PAYMENT.CAPTURE.DENIED", "PAYMENT.CAPTURE.REVERSED"]) {
-      rpc.mockClear();
-      await POST(post({ ...captureCompleted, event_type: type }));
-      expect(rpc).toHaveBeenCalledWith("record_payment_result", {
-        p_order_id: "ORDER-9",
-        p_status: "FAILED",
-        p_capture_id: null,
-      });
-    }
+    await POST(post({ ...captureCompleted, event_type: "PAYMENT.CAPTURE.DENIED" }));
+    expect(rpc).toHaveBeenCalledWith("record_payment_result", {
+      p_order_id: "ORDER-9",
+      p_status: "FAILED",
+      p_capture_id: null,
+    });
   });
 
   it("acknowledges informational events without changing any state", async () => {
@@ -92,14 +89,19 @@ describe("webhook de PayPal: la firma es la única autorización", () => {
     expect(rpc).not.toHaveBeenCalled();
   });
 
-  it("LIMITACIÓN CONOCIDA: un reembolso se reconoce pero no revierte el hito", async () => {
-    // PACTO no implementa reembolsos todavía: PAYMENT.CAPTURE.REFUNDED no está en el
-    // mapa de estados, así que el aviso se acepta y no cambia nada. Queda fijado aquí
-    // para que el día que se implementen, esta prueba obligue a actualizarla.
+  // Un reembolso o una reversión devuelven el dinero: el hito deja de constar pagado.
+  // Antes REVERSED se trataba como fallo y, al estar ya capturado, no cambiaba nada.
+  it("registra un reembolso o una reversión confirmados por PayPal", async () => {
     verifyWebhook.mockResolvedValue(true);
-    const response = await POST(post({ ...captureCompleted, event_type: "PAYMENT.CAPTURE.REFUNDED" }));
-    expect(response.status).toBe(200);
-    expect(rpc).not.toHaveBeenCalled();
+    for (const type of ["PAYMENT.CAPTURE.REFUNDED", "PAYMENT.CAPTURE.REVERSED"]) {
+      rpc.mockClear();
+      const response = await POST(post({ ...captureCompleted, event_type: type }));
+      expect(response.status).toBe(200);
+      expect(rpc).toHaveBeenCalledWith("record_payment_refund", {
+        p_order_id: "ORDER-9",
+        p_refund_id: "CAPTURE-9",
+      });
+    }
   });
 
   it("returns 400 on a verified notification whose body is not JSON", async () => {

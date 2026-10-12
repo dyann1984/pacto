@@ -17,6 +17,7 @@ export interface DeliveryProgress {
   total: number;
   awaitingEvidence: number; // hitos sin evidencia del proveedor
   awaitingApproval: number; // con evidencia, pendientes de que el cliente autorice
+  awaitingPayment?: number; // autorizados y todavía sin pagar
 }
 
 export interface JourneyInput {
@@ -30,6 +31,9 @@ export interface JourneyInput {
   iConfirmedClosure: boolean;
   closures: number;
   deliveries?: DeliveryProgress;
+  // Si se puede pagar con PayPal en este entorno. La base rechaza pagos en un Pacto
+  // cerrado (`PACTO_NOT_ACTIVE`): si el cliente cierra antes de pagar, ya no podrá.
+  paymentsEnabled?: boolean;
 }
 
 export type JourneyAction = "invite" | "submit" | "accept" | "deliver" | "confirm";
@@ -45,6 +49,9 @@ export interface NextStep {
   body: string;
   action: JourneyAction | null;
   waiting: boolean;
+  // Hay hitos autorizados sin pagar: conviene pagarlos antes de cerrar. Cerrar sigue
+  // permitido —nunca dependió del pago—, pero se avisa de que después no se podrá.
+  payFirst?: boolean;
 }
 
 export const journeySteps = [
@@ -153,6 +160,16 @@ export function nextStep(input: JourneyInput): NextStep {
           "Presentaste la evidencia. El cliente debe revisarla y autorizarla antes de que el Pacto pueda cerrarse.",
         );
   }
+
+  const unpaid = input.deliveries?.awaitingPayment ?? 0;
+  if (input.paymentsEnabled && unpaid > 0 && input.myRole === "BUYER" && !input.iConfirmedClosure)
+    return {
+      title: "Paga con PayPal y después confirma el cierre",
+      body: "La entrega está autorizada. Paga el hito en «Entregas y pagos» antes de cerrar: un Pacto cerrado ya no admite pagos. Cuando PayPal confirme el cobro, confirma el cierre.",
+      action: "confirm",
+      waiting: false,
+      payFirst: true,
+    };
 
   return input.iConfirmedClosure
     ? waiting(

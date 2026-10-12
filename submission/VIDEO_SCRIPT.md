@@ -43,7 +43,7 @@ logging in as the other person. Nothing is faked, and nothing is relaxed."
 
 "The buyer states the scope, what is excluded, and the amount.
 
-Five steps across the top, and exactly one clear next action. At every moment
+Six stages across the top, and exactly one clear next action. At every moment
 each party knows whose turn it is."
 
 ## 1:05 – 1:25 · Invite the supplier
@@ -96,14 +96,23 @@ I switch to the buyer, read the evidence, and authorize. Explicitly, as a human.
 
 Only then does PayPal appear. The buyer approves inside PayPal Sandbox, and PACTO
 records the capture against that specific milestone. The amount comes from the
-database row, never from the form."
+database row, never from the form. A payment only counts once PayPal confirms it:
+the browser cannot mark anything as paid, and a refund issued in PayPal flows back
+through a signed webhook."
 
-## 2:40 – 2:50 · Close
+> **Order matters:** pay *before* confirming closure. A closed Pacto no longer
+> accepts payments, and the guided next step says so ("Paga con PayPal y después
+> confirma el cierre").
+
+## 2:40 – 2:55 · Close and benefits
 
 > **On screen:** both confirm closure; scroll the activity trail.
 
 "Both sides confirm the work is done, and every action is there: who did what,
 and when.
+
+For the buyer: no paying blind. For the supplier: proof of delivery and a clear
+path to getting paid. For both: one version of the truth.
 
 A clear agreement. Evidence before payment. PayPal when a human says so.
 
@@ -117,7 +126,8 @@ That is PACTO."
 - Judge Mode runs in one window, so there is nothing to arrange side by side.
 - Do not show any email address or identifier belonging to a real person.
 - Before recording, run `pnpm check:integrations` and confirm PayPal and the AI
-  key answer. Recording first and discovering a "not activated" notice mid-take
+  key answer. **As of 12 October 2026 neither is configured in production**: the
+  live site honestly shows "todavía no está activado" for both. Recording first and discovering a "not activated" notice mid-take
   wastes a session.
 - **If the PayPal credentials are not configured when you record**, replace
   2:10–2:40 with the evidence and authorization steps only, and say: "With PayPal

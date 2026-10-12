@@ -92,6 +92,10 @@ const aiMessages: Record<string, { tone: "info" | "error"; text: string }> = {
     tone: "info",
     text: "Esta versión ya tiene el máximo de 3 análisis. Si cambian el acuerdo, podrán analizar la nueva versión.",
   },
+  saturado: {
+    tone: "info",
+    text: "El servicio de análisis está al límite en este momento. No es un fallo del acuerdo: espera un minuto y vuelve a intentarlo.",
+  },
   "not-configured": {
     tone: "info",
     text: "El análisis con IA todavía no está activado. Puedes continuar con el acuerdo con normalidad.",
@@ -131,6 +135,7 @@ const eventLabels: Record<string, string> = {
   PAYMENT_ORDER_CREATED: "Orden de pago creada en PayPal",
   PAYMENT_CAPTURED: "Pago completado en PayPal",
   PAYMENT_FAILED: "Pago no completado",
+  PAYMENT_REFUNDED: "Pago reembolsado por PayPal",
   PACTO_CREATED: "Pacto creado",
   PARTICIPANT_ADDED: "Se unió al Pacto",
   INVITATION_CREATED: "Invitación generada",
@@ -241,6 +246,9 @@ export default async function Center({
 
   const pactoStatus = pacto.status as PactoStatus;
   const isActive = pactoStatus === "ACTIVE";
+  // «Listo» incluye poder registrar el resultado: ofrecer pagar sin conciliación dejaría
+  // un cobro real en PayPal sin constancia en PACTO.
+  const paypalReady = isPayPalConfigured() && isSettlementConfigured();
   const myRole = (participants?.find((p) => p.user_id === userId)?.role ?? null) as Role | null;
   const isParticipant = myRole !== null;
   const roleOf = (uid: string) =>
@@ -270,7 +278,9 @@ export default async function Center({
       total: milestones.length,
       awaitingEvidence: milestones.filter((m) => m.status === "PENDING").length,
       awaitingApproval: milestones.filter((m) => m.status === "EVIDENCE_SUBMITTED").length,
+      awaitingPayment: milestones.filter((m) => m.status === "APPROVED").length,
     },
+    paymentsEnabled: paypalReady,
   };
   const step = nextStep(journey);
   const stepIndex = currentStepIndex(journey);
@@ -278,9 +288,6 @@ export default async function Center({
   const aiMessage = ai ? aiMessages[ai] ?? aiMessages.failed : null;
   const paymentMessage = pago ? paymentMessages[pago] ?? paymentMessages.failed : null;
   const aiReady = isAnalysisConfigured();
-  // «Listo» incluye poder registrar el resultado: ofrecer pagar sin conciliación dejaría
-  // un cobro real en PayPal sin constancia en PACTO.
-  const paypalReady = isPayPalConfigured() && isSettlementConfigured();
 
   function fields(operation: string) {
     return (
@@ -388,6 +395,11 @@ export default async function Center({
             <SubmitButton>Aceptar versión {current.version} →</SubmitButton>
           </form>
         )}
+        {isActive && step.payFirst && (
+          <a className="button" href="#entregas">
+            Ir a pagar con PayPal ↓
+          </a>
+        )}
         {isActive && step.action === "confirm" && (
           <form action={confirmClosure}>
             <input type="hidden" name="pactoId" value={id} />
@@ -491,6 +503,7 @@ export default async function Center({
             rows={milestones}
             role={myRole}
             paypalReady={paypalReady}
+            active={isActive}
           />
         )}
 

@@ -51,7 +51,7 @@ nuevo.*
 | Criterio | Cómo responde PACTO | Riesgo |
 |---|---|---|
 | **Technological Implementation** — ¿usa a fondo y con destreza la plataforma de PayPal y la IA? ¿Es una implementación real y no trivial? | PayPal Orders v2 con idempotencia, captura y webhooks verificados que fallan cerrados; IA con esquema estricto y huella SHA-256 de la entrada | **Alto si siguen sin credenciales:** el jurado vería un aviso de «no activado» justo en los dos puntos que se evalúan |
-| **Design** — ¿es un producto completo y coherente, no una prueba de concepto? | Recorrido de cinco pasos, guía de «qué sigue» en cada pantalla, responsive, estados de carga y error | Bajo |
+| **Design** — ¿es un producto completo y coherente, no una prueba de concepto? | Recorrido de seis pasos, guía de «qué sigue» en cada pantalla, responsive, estados de carga y error | Bajo |
 | **Potential Impact** — ¿plantea un problema real de un público real y lo resuelve? | Comercio entre pequeños negocios por mensajería informal; pago contra evidencia autorizada | Bajo |
 | **Innovation/Idea** — ¿es creativo y distinto? | La autorización humana explícita como puerta del pago, impuesta por la base de datos y no por la interfaz; Modo Juez | Bajo |
 | **Presentation** — ¿el vídeo demuestra el proyecto funcionando de extremo a extremo? | Guion listo | **Alto: el vídeo no está grabado** |

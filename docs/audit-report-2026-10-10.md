@@ -468,15 +468,32 @@ muestra «Pendiente de entrega» sobre un acuerdo cerrado — exactamente el sí
 originó esta auditoría.
 
 La migración no lo corrige, porque es un dato histórico y un Pacto cerrado no admite
-cambios. Opciones, a decidir por la propietaria:
+cambios.
 
-1. **Dejarlo como está** y explicarlo: es un registro anterior a la corrección. Un juez
-   atento puede percibirlo como incoherencia.
-2. **Sembrar un ejemplo nuevo y coherente** —recorrido completo hasta `PAID`— y mover la
-   marca `is_demo_example` a ese. No borra nada; solo cambia cuál es el escaparate.
+### Resuelto: escaparate sustituido
 
-La opción 2 es la recomendable antes del concurso. Requiere SQL directo como propietaria,
-igual que la migración.
+Con autorización de la propietaria se sembró un ejemplo nuevo y coherente, recorriendo el
+ciclo completo con las RPC reales —crear, invitar, unirse, revisar, aceptar por ambas
+partes, presentar evidencia, autorizar y cerrar— y se movió la marca `is_demo_example`.
+
+| | antes | ahora |
+|---|---|---|
+| Pacto de ejemplo | `bb8e97f5-89e3-4ac7-becc-7b5578bc8baf` | **`87d33394-b68e-48e3-976a-da88585b02e0`** |
+| Título | Diseño de identidad de marca | Rediseño del sitio web y migración de catálogo |
+| Estado | `CLOSED` | `CLOSED` |
+| Hito | `PENDING` → «Pendiente de entrega» | **`APPROVED` → «Autorizado para pago»** |
+
+**No se inventó ningún pago**: no se creó ninguna fila en `payments` ni ningún
+comprobante, porque un cobro solo puede afirmarlo el servidor tras verificarlo en PayPal.
+El ejemplo llega hasta la entrega autorizada, que es el cierre legítimo del ciclo.
+
+El Pacto histórico `bb8e97f5` **no se modificó** salvo en que dejó de llevar la marca: su
+contenido, su estado y su auditoría quedan intactos. Siguen siendo 7 los Pactos cerrados
+sin entrega.
+
+`PACTO_DEMO_EXAMPLE_ID` no se usa en `src/` —la aplicación localiza el ejemplo por la
+columna `is_demo_example` y RLS—, así que no hizo falta tocar ninguna variable en Vercel.
+Solo se actualizó en `.env.local`, que consume `tests/e2e/demo.spec.ts`.
 
 ## Investigación del Modo Juez en el Preview
 
@@ -510,9 +527,10 @@ Confirmado por dos vías independientes:
 
 - El bundle de `https://pacto-pearl.vercel.app` embebe el proyecto
   `qmfwilyarxnomyufnwwv`, que es exactamente donde se aplicó la migración.
-- En ejecución, producción sirve el Pacto de ejemplo
+- En ejecución, producción servía el Pacto de ejemplo
   `bb8e97f5-89e3-4ac7-becc-7b5578bc8baf`, el mismo identificador que
-  `PACTO_DEMO_EXAMPLE_ID` y el mismo que sirve el Preview.
+  `PACTO_DEMO_EXAMPLE_ID` y el mismo que servía el Preview. (Ese escaparate se sustituyó
+  después; ver «Resuelto: escaparate sustituido».)
 
 **Preview y Production comparten base de datos.** No hay proyecto Supabase separado para
 Preview, de modo que cualquier prueba en Preview escribe sobre los datos de producción.
@@ -526,15 +544,30 @@ ese visitante **sí participa**. El navegador había reutilizado una sesión DEM
 (`/demo` reutiliza la sesión existente en lugar de crear otra), y Supabase la guarda en
 cookies, no en `localStorage`. Comportamiento correcto.
 
+## Desplegado a producción
+
+Con autorización expresa de la propietaria, `feat/paypal-ai-demo` se fusionó en la rama
+`production` (**`2f7610c`**, sin conflictos) y se publicó. Vercel completó el despliegue
+y figura como **Ready / Production**.
+
+Verificado en `https://pacto-pearl.vercel.app`: el 404 ya muestra el texto nuevo («No
+existe, o no eres participante de este recurso. Por seguridad, PACTO responde lo mismo en
+ambos casos») junto al explicador de sesión, y el Pacto de ejemplo renderiza «Autorizado
+para pago» con la evidencia del proveedor.
+
+Ancla de reversión: `7d08940`. Procedimiento en
+[`runbook-despliegue-d0da619.md`](runbook-despliegue-d0da619.md).
+
 ## Dictamen actualizado
 
-**GO** para desplegar `d0da619` a producción.
+**GO — desplegado y verificado.**
 
-Con un matiz que conviene entender: **la vulnerabilidad ya está cerrada en producción**,
-porque la defensa vive en la base de datos, no en el código. Producción sigue ejecutando
-el código anterior, que no conoce el código de error `DELIVERY_REQUIRED`: si alguien
-intenta cerrar antes de tiempo verá el mensaje genérico «No se pudo completar la acción»
-en vez de la explicación correcta. Es seguro pero confuso, y desplegar lo resuelve.
+Conviene entender el orden en que ocurrió: **la vulnerabilidad estaba cerrada desde que se
+aplicó la migración**, porque la defensa vive en la base de datos, no en el código.
+Mientras producción ejecutó el código anterior, un intento de cierre prematuro se
+rechazaba correctamente pero se explicaba con un «No se pudo completar la acción»
+genérico, porque ese código no conocía `DELIVERY_REQUIRED`. El despliegue resolvió esa
+parte.
 
 **NO-GO para pagos**, sin cambios: falta `SUPABASE_SERVICE_ROLE_KEY` en Vercel, así que
 `isSettlementConfigured()` es falso y PACTO no ofrece pagar — estado seguro por diseño.
