@@ -174,24 +174,28 @@ export async function verifyWebhook(
   if (values.some((v) => !v)) return false;
   const token = await accessToken(fetchImpl);
   if (token.status !== "OK") return false;
-  let parsedBody: unknown;
+  // El cuerpo debe ser un objeto JSON válido; solo entonces se puede insertar tal cual.
   try {
-    parsedBody = JSON.parse(rawBody);
+    const parsed: unknown = JSON.parse(rawBody);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return false;
   } catch {
     return false;
   }
+  // La firma de PayPal cubre los bytes exactos del aviso. Volver a serializarlo
+  // (JSON.parse + JSON.stringify) puede cambiar escapes o números y hacer fallar una
+  // verificación legítima, así que el evento viaja sin tocar.
+  const envelope = JSON.stringify({
+    transmission_id: values[0],
+    transmission_time: values[1],
+    transmission_sig: values[2],
+    cert_url: values[3],
+    auth_algo: values[4],
+    webhook_id: webhookId,
+  });
   const response = await fetchImpl(`${apiBase()}/v1/notifications/verify-webhook-signature`, {
     method: "POST",
     headers: { authorization: `Bearer ${token.data}`, "content-type": "application/json" },
-    body: JSON.stringify({
-      transmission_id: values[0],
-      transmission_time: values[1],
-      transmission_sig: values[2],
-      cert_url: values[3],
-      auth_algo: values[4],
-      webhook_id: webhookId,
-      webhook_event: parsedBody,
-    }),
+    body: `${envelope.slice(0, -1)},"webhook_event":${rawBody}}`,
     signal: AbortSignal.timeout(TIMEOUT_MS),
   });
   if (!response.ok) return false;

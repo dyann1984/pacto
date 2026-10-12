@@ -23,7 +23,8 @@ export function isSettlementConfigured() {
  *
  * Aunque este cliente puede saltarse RLS, solo ejecuta `record_payment_result` y
  * `record_payment_refund`, que aceptan únicamente órdenes ya registradas por PACTO y
- * son idempotentes.
+ * son idempotentes, y lee `payments.order_id` a partir de una captura para conciliar
+ * un reembolso.
  */
 export function supabaseService() {
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;

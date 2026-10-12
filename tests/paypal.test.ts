@@ -170,6 +170,25 @@ describe("PayPal: webhooks", () => {
     expect(sent.transmission_sig).toBe("firma");
   });
 
+  it("sends PayPal the event byte for byte, so a legitimate signature is not broken", async () => {
+    withCredentials();
+    vi.stubEnv("PAYPAL_WEBHOOK_ID", "WH-1");
+    const { impl, calls } = fakePayPal({ ...tokenRoute, "/verify-webhook-signature": { body: { verification_status: "SUCCESS" } } });
+    // Escapes y números que JSON.parse + JSON.stringify reescribirían ("é" -> "é", 1.50 -> 1.5).
+    const raw = '{"event_type":"PAYMENT.CAPTURE.COMPLETED","summary":"Caf\\u00e9","resource":{"amount":1.50}}';
+    expect(await verifyWebhook(signedHeaders(), raw, impl)).toBe(true);
+    const body = String(calls.find((c) => c.url.includes("/verify-webhook-signature"))!.init.body);
+    expect(body.endsWith(`"webhook_event":${raw}}`)).toBe(true);
+    expect(JSON.parse(body).webhook_id).toBe("WH-1");
+  });
+
+  it("rejects a body that is valid JSON but not an event object", async () => {
+    withCredentials();
+    vi.stubEnv("PAYPAL_WEBHOOK_ID", "WH-1");
+    const { impl } = fakePayPal({ ...tokenRoute, "/verify-webhook-signature": { body: { verification_status: "SUCCESS" } } });
+    for (const raw of ["[]", "null", "42", '"texto"']) expect(await verifyWebhook(signedHeaders(), raw, impl)).toBe(false);
+  });
+
   it("rejects a forged webhook that PayPal does not verify", async () => {
     withCredentials();
     vi.stubEnv("PAYPAL_WEBHOOK_ID", "WH-1");

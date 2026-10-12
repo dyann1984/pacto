@@ -5,15 +5,37 @@ import { verifyWebhook } from "@/lib/paypal";
 
 export const dynamic = "force-dynamic";
 
+type Link = { rel?: string; href?: string };
+type Resource = {
+  id?: string;
+  links?: Link[];
+  supplementary_data?: { related_ids?: { order_id?: string } };
+};
+
+// Eventos que cambian un estado. Cualquier otro se reconoce sin tocar nada.
+const CAPTURE_STATUS: Record<string, "CAPTURED" | "FAILED"> = {
+  "PAYMENT.CAPTURE.COMPLETED": "CAPTURED",
+  // Orders v2 publica DENIED; la referencia de Payments v2 nombra DECLINED. Ambos son un
+  // cobro que no se produjo.
+  "PAYMENT.CAPTURE.DENIED": "FAILED",
+  "PAYMENT.CAPTURE.DECLINED": "FAILED",
+};
+const REFUND_EVENTS = new Set(["PAYMENT.CAPTURE.REFUNDED", "PAYMENT.CAPTURE.REVERSED"]);
+
+/** La captura a la que apunta un reembolso: el enlace `up` (…/v2/payments/captures/{id}). */
+function captureIdFromLinks(links?: Link[]) {
+  const up = links?.find((l) => l.rel === "up" && l.href?.includes("/captures/"));
+  return up?.href?.match(/\/captures\/([A-Za-z0-9-]{3,128})/)?.[1];
+}
+
 /**
- * Avisos de PayPal Sandbox. Fuente de verdad secundaria: la captura normal ocurre
- * en el retorno del pagador, y este webhook cubre el caso de que esa vuelta se
- * pierda (cierre del navegador, red caída).
+ * Avisos de PayPal Sandbox. Fuente de verdad secundaria para la captura (la normal ocurre
+ * en el retorno del pagador; este webhook cubre que esa vuelta se pierda o que la captura
+ * quede pendiente) y única para los reembolsos.
  *
- * Falla cerrado: sin firma válida de PayPal no se toca nada. El aviso llega sin
- * sesión de usuario, así que se usa un cliente sin cookies; la escritura la hace
- * la RPC `record_payment_result`, que es idempotente y solo acepta órdenes ya
- * registradas por PACTO. Nunca se registra el cuerpo del aviso.
+ * Falla cerrado: sin firma válida de PayPal no se toca nada. El aviso llega sin sesión de
+ * usuario, así que escribe el rol de servicio mediante RPC idempotentes que solo aceptan
+ * órdenes ya registradas por PACTO. Nunca se registra el cuerpo del aviso.
  */
 export async function POST(request: Request) {
   if (!isConfigured()) return NextResponse.json({ received: true }, { status: 200 });
@@ -24,7 +46,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "invalid signature" }, { status: 401 });
   }
 
-  let event: { event_type?: string; resource?: { id?: string; supplementary_data?: { related_ids?: { order_id?: string } } } };
+  let event: { event_type?: string; resource?: Resource };
   try {
     event = JSON.parse(raw);
   } catch {
@@ -32,48 +54,53 @@ export async function POST(request: Request) {
   }
 
   const type = event.event_type ?? "";
-  const orderId =
-    type === "CHECKOUT.ORDER.APPROVED"
-      ? event.resource?.id
-      : event.resource?.supplementary_data?.related_ids?.order_id;
-  if (!orderId) return NextResponse.json({ received: true }, { status: 200 });
-
-  // Un reembolso o una reversión devuelven el dinero al cliente: el hito deja de constar
-  // como pagado. Antes `REVERSED` se trataba como fallo y, al estar ya capturado, la RPC
-  // devolvía ALREADY_CAPTURED sin cambiar ni auditar nada.
-  const isRefund =
-    type === "PAYMENT.CAPTURE.REFUNDED" || type === "PAYMENT.CAPTURE.REVERSED";
-  const status =
-    type === "PAYMENT.CAPTURE.COMPLETED"
-      ? "CAPTURED"
-      : type === "PAYMENT.CAPTURE.DENIED"
-        ? "FAILED"
-        : null;
-  // Los avisos informativos (orden aprobada, por ejemplo) no cambian ningún estado.
+  const resource = event.resource ?? {};
+  const status = CAPTURE_STATUS[type] ?? null;
+  const isRefund = REFUND_EVENTS.has(type);
+  // Los avisos informativos (orden aprobada, captura pendiente…) no cambian ningún estado.
   if (!status && !isRefund) return NextResponse.json({ received: true }, { status: 200 });
 
-  // Sin sesión de usuario, la única vía de escritura es el rol de servicio. Si no
-  // está configurado, el aviso se reconoce pero no cambia nada: la captura normal
-  // ya ocurre en el retorno del pagador.
+  // Sin sesión de usuario, la única vía de escritura es el rol de servicio. Si no está
+  // configurado, el aviso se reconoce pero no cambia nada.
   const db = supabaseService();
   if (!db) {
     console.error(`[paypal] webhook ${type}: conciliación no configurada`);
     return NextResponse.json({ received: true }, { status: 200 });
   }
+
+  let orderId = resource.supplementary_data?.related_ids?.order_id;
+  if (isRefund && !orderId) {
+    // El recurso de un reembolso es el propio reembolso: identifica la captura por su
+    // enlace `up` (o es la captura misma, en una reversión) y la orden sale de PACTO.
+    const captureId = captureIdFromLinks(resource.links) ?? resource.id;
+    if (captureId) {
+      const { data } = await db
+        .from("payments")
+        .select("order_id")
+        .eq("capture_id", captureId)
+        .maybeSingle();
+      orderId = data?.order_id;
+    }
+  }
+  if (!orderId) {
+    console.error(`[paypal] webhook ${type}: no se identificó la orden`);
+    return NextResponse.json({ received: true }, { status: 200 });
+  }
+
   const { error } = isRefund
     ? await db.rpc("record_payment_refund", {
         p_order_id: orderId,
-        p_refund_id: event.resource?.id ?? null,
+        p_refund_id: resource.id ?? null,
       })
     : await db.rpc("record_payment_result", {
         p_order_id: orderId,
         p_status: status,
-        p_capture_id: type === "PAYMENT.CAPTURE.COMPLETED" ? (event.resource?.id ?? null) : null,
+        p_capture_id: status === "CAPTURED" ? (resource.id ?? null) : null,
       });
   if (error) {
     console.error(`[paypal] webhook ${type}: no se pudo registrar el resultado`);
-    // 200 de todos modos: PayPal reintenta ante un error, y el retorno del
-    // pagador ya cubre el caso normal. Un reintento infinito no ayudaría.
+    // 200 de todos modos: PayPal reintenta ante un error, y un reintento infinito no
+    // ayudaría. Las RPC son idempotentes si el aviso se repite.
   }
   return NextResponse.json({ received: true }, { status: 200 });
 }

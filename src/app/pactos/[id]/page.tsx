@@ -108,6 +108,10 @@ const paymentMessages: Record<string, { tone: "info" | "error"; text: string }> 
   pagado: { tone: "info", text: "Pago registrado en PayPal Sandbox. El comprobante quedó en la actividad." },
   cancelado: { tone: "info", text: "Cancelaste el pago en PayPal. El hito sigue autorizado y puedes intentarlo de nuevo." },
   rechazado: { tone: "error", text: "PayPal no completó el pago. No se cobró nada; puedes intentarlo de nuevo." },
+  pendiente: {
+    tone: "info",
+    text: "PayPal aceptó el pago y lo está procesando. Todavía no consta como cobrado: no vuelvas a pagar. El hito aparecerá como pagado cuando PayPal lo confirme.",
+  },
   conciliacion: {
     tone: "error",
     text: "PayPal completó el cobro, pero PACTO no pudo registrarlo todavía. No vuelvas a pagar: el aviso firmado de PayPal lo conciliará y el hito aparecerá como pagado.",
