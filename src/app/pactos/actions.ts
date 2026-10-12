@@ -209,6 +209,10 @@ export async function acceptInvitation(form: FormData) {
 }
 
 const AI_ANALYSES_PER_VERSION = 3;
+// Topes de gasto: por persona (una evaluación completa usa 1-3) y globales, porque abrir
+// otra sesión anónima esquiva el tope personal. Ver 202610160001_ai_quota.sql.
+const AI_ANALYSES_PER_USER_PER_DAY = 6;
+const AI_ANALYSES_GLOBAL_PER_HOUR = 60;
 
 const milestoneErrors = [
   "EVIDENCE_REQUIRED",
@@ -341,6 +345,12 @@ export async function runAgreementAnalysis(form: FormData) {
     .eq("agreement_id", agreementId);
   if (countError) redirect(`/pactos/${pactoId}?ai=failed`);
   if ((count ?? 0) >= AI_ANALYSES_PER_VERSION) redirect(`/pactos/${pactoId}?ai=limit`);
+  // Cupo por persona y global, antes de gastar nada. Sin poder consultarlo no se analiza.
+  const { data: quotaRows, error: quotaError } = await db.rpc("ai_quota");
+  const quota = (quotaRows as { mine_24h: number; all_1h: number }[] | null)?.[0];
+  if (quotaError || !quota) redirect(`/pactos/${pactoId}?ai=failed`);
+  if (quota.all_1h >= AI_ANALYSES_GLOBAL_PER_HOUR) redirect(`/pactos/${pactoId}?ai=cupo-global`);
+  if (quota.mine_24h >= AI_ANALYSES_PER_USER_PER_DAY) redirect(`/pactos/${pactoId}?ai=cupo`);
 
   let outcome;
   try {
