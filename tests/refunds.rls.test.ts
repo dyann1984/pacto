@@ -23,6 +23,7 @@ const MIGRATIONS = [
   "supabase/migrations/202610120001_milestones_payments.sql",
   "supabase/migrations/202610130001_closure_requires_delivery.sql",
   "supabase/migrations/202610140001_refunds.sql",
+  "supabase/migrations/202610150001_refund_by_capture.sql",
 ];
 
 let db: PGlite;
@@ -165,6 +166,63 @@ describe.sequential("reembolsos confirmados por PayPal", () => {
     await asService("select public.record_payment_result($1,$2)", ["ORDER-R2", "CANCELLED"]);
     expect((await scalar<{ r: string }>(BUYER, "select public.confirm_closure($1,'') r", [pacto])).r).toBe("CONFIRMED");
     expect((await scalar<{ r: string }>(SELLER, "select public.confirm_closure($1,'') r", [pacto])).r).toBe("CLOSED");
+  });
+
+  // Lo que se vio en producción: el rol de servicio NO puede leer `payments`, así que la
+  // traducción captura -> orden tiene que hacerla la base. Aquí se ejecuta con el rol real
+  // service_role, no como superusuario.
+  describe("reembolso identificado por la captura (202610150001)", () => {
+    async function asServiceRole(query: string, params: unknown[] = []) {
+      await db.exec("reset role");
+      await db.query("select set_config('request.jwt.claim.sub','',false)");
+      await db.exec("set role service_role");
+      try {
+        return await db.query(query, params);
+      } finally {
+        await db.exec("reset role");
+      }
+    }
+
+    it("service_role no lee payments, pero sí registra el reembolso por captura", async () => {
+      // Pago nuevo, capturado, sobre otro Pacto (el anterior ya está cerrado).
+      const p2 = (
+        await scalar<{ id: string }>(BUYER, "select public.create_pacto('Reembolso por captura','Alcance para el reembolso identificado por captura',50000) id")
+      ).id;
+      const token = (await scalar<{ t: string }>(BUYER, "select public.create_invitation($1) t", [p2])).t;
+      await asUser(SELLER, "select public.accept_invitation($1)", [token]);
+      const a2 = (await scalar<{ id: string }>(BUYER, "select id from public.agreements where pacto_id=$1", [p2])).id;
+      const m2 = (await scalar<{ id: string }>(BUYER, "select id from public.milestones where agreement_id=$1", [a2])).id;
+      await asUser(BUYER, "select public.submit_agreement($1)", [a2]);
+      await asUser(SELLER, "select public.accept_agreement($1)", [a2]);
+      await asUser(BUYER, "select public.accept_agreement($1)", [a2]);
+      await asUser(SELLER, "select public.submit_milestone_evidence($1,$2)", [m2, "Entrega del segundo escenario."]);
+      await asUser(BUYER, "select public.approve_milestone($1)", [m2]);
+      await asUser(BUYER, "select public.record_payment_order($1,$2,$3)", [m2, "ORDER-C1", 50000]);
+      await asService("select public.record_payment_result($1,$2,$3)", ["ORDER-C1", "CAPTURED", "CAPTURE-C1"]);
+
+      // Sin GRANT manual: el permiso de ejecución lo concede la propia migración.
+      await expect(asServiceRole("select order_id from public.payments where capture_id='CAPTURE-C1'")).rejects.toThrow("permission denied");
+      const r = await asServiceRole("select public.record_payment_refund_by_capture($1,$2) r", ["CAPTURE-C1", "REFUND-C1"]);
+      expect((r.rows[0] as { r: string }).r).toBe("REFUNDED");
+
+      const p = await scalar<{ status: string; refund_id: string }>(BUYER, "select status, refund_id from public.payments where order_id='ORDER-C1'");
+      expect(p).toEqual({ status: "REFUNDED", refund_id: "REFUND-C1" });
+      expect((await scalar<{ s: string }>(BUYER, "select status s from public.milestones where id=$1", [m2])).s).toBe("APPROVED");
+      expect(
+        (await scalar<{ n: number }>(BUYER, "select count(*)::int n from public.audit_events where pacto_id=$1 and event_type='PAYMENT_REFUNDED'", [p2])).n,
+      ).toBe(1);
+      // Idempotente ante el aviso repetido.
+      const again = await asServiceRole("select public.record_payment_refund_by_capture($1,$2) r", ["CAPTURE-C1", "REFUND-C1"]);
+      expect((again.rows[0] as { r: string }).r).toBe("ALREADY_REFUNDED");
+    });
+
+    it("ningún cliente puede usarla, y una captura desconocida no toca nada", async () => {
+      for (const who of [BUYER, SELLER, INTRUDER])
+        await expect(asUser(who, "select public.record_payment_refund_by_capture($1,$2)", ["CAPTURE-C1", "X"])).rejects.toThrow(
+          /REFUND_NOT_ALLOWED|permission denied/,
+        );
+      await expect(asServiceRole("select public.record_payment_refund_by_capture($1,$2)", ["CAPTURA-AJENA", "X"])).rejects.toThrow("NOT_FOUND");
+    });
   });
 
   it("la migración no concede ningún permiso nuevo a los clientes", async () => {
