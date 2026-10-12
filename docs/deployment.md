@@ -14,6 +14,12 @@
 > - **Ojo:** `vercel env pull` no devuelve las variables *sensibles*: entrega un marcador
 >   fijo de 11 caracteres, así que no sirve para comparar ni para probar sus valores.
 >   Para validarlas, usar `.env.local` (mismos valores) o el comportamiento en producción.
+> - **Estado final del 12-oct-2026:** `production` = `fcb84dc` (despliegue `pacto-algjgx9my`).
+>   IA activa (`claude-sonnet-5-5`) con estado de carga, errores distinguidos, cupo por
+>   versión/persona/hora (migración `202610160001_ai_quota.sql`) y prompt corregido para no
+>   dar el importe por ausente. Recorrido completo del Modo Juez verificado en producción con
+>   IA y pago Sandbox de 25 000 MXN (captura `7BB05851NH2454155`, webhook firmado → 200) y
+>   cierre por ambas partes. Capturas de Devpost en `submission/screenshots/`.
 > - **Prueba de extremo a extremo en producción con PayPal Sandbox (12-oct-2026), superada.**
 >   Pacto `d26690e0…`, 500.00 MXN: orden `045822881S794310H` → aprobación de la compradora
 >   Sandbox → captura `8PB17074MY5102817` (`COMPLETED`) registrada por el retorno → hito

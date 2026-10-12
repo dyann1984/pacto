@@ -103,10 +103,18 @@ test("capturas de Devpost: portada, IA, entregas y PayPal, en escritorio y móvi
   await phone.goto(`/pactos/${id}`);
   await settle(phone);
   await phone.screenshot({ path: `${OUT}/14-movil-pacto.png` });
-  const phoneAi = phone.locator("section.card").filter({ has: phone.getByRole("heading", { name: "Análisis con IA" }) });
-  await phoneAi.scrollIntoViewIfNeeded();
-  await phone.screenshot({ path: `${OUT}/15-movil-ia.png` });
-  await phone.locator("section#entregas").scrollIntoViewIfNeeded();
-  await phone.screenshot({ path: `${OUT}/16-movil-paypal.png` });
+  // Recorte de la página completa desde el inicio de la sección, a tamaño de pantalla: no
+  // depende de cómo se desplace la página.
+  async function phoneSection(section: ReturnType<Page["locator"]>, path: string) {
+    await phone.evaluate(() => window.scrollTo(0, 0));
+    const box = await section.boundingBox();
+    if (!box) throw new Error(`sección no visible para ${path}`);
+    await phone.screenshot({ path, fullPage: true, clip: { x: 0, y: Math.max(0, box.y - 16), width: 390, height: 844 } });
+  }
+  await phoneSection(
+    phone.locator("section.card").filter({ has: phone.getByRole("heading", { name: "Análisis con IA" }) }),
+    `${OUT}/15-movil-ia.png`,
+  );
+  await phoneSection(phone.locator("section#entregas"), `${OUT}/16-movil-paypal.png`);
   await mobile.close();
 });
