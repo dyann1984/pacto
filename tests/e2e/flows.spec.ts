@@ -112,7 +112,12 @@ test("AI analysis shows real findings or an explicit not-configured notice", asy
   await pageA.goto(`/pactos/${pactoId}`);
   if (process.env.PACTO_E2E_AI === "configured") {
     await pageA.getByRole("button", { name: /Analizar versión 1/ }).click();
-    await expect(pageA.getByText("Análisis registrado")).toBeVisible();
+    // Mientras tanto, el botón anuncia la espera y no admite otro clic (cada llamada se paga).
+    await expect(pageA.getByRole("button", { name: /Analizando el acuerdo/ })).toBeDisabled();
+    // Una llamada real al modelo tarda ~20 s; el servidor corta a los 90 s.
+    test.setTimeout(150_000);
+    await expect(pageA.getByText("Análisis registrado")).toBeVisible({ timeout: 95_000 });
+    await expect(pageA.getByText(/por claude-[\w.-]+ \(Anthropic\)/)).toBeVisible();
     await expect(pageA.locator(".finding").first()).toBeVisible();
   } else {
     // Sin proveedor configurado no se ofrece un botón que fallaría ni resultados simulados.
