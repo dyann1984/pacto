@@ -14,6 +14,16 @@
 > - **Ojo:** `vercel env pull` no devuelve las variables *sensibles*: entrega un marcador
 >   fijo de 11 caracteres, así que no sirve para comparar ni para probar sus valores.
 >   Para validarlas, usar `.env.local` (mismos valores) o el comportamiento en producción.
+> - **Prueba de extremo a extremo en producción con PayPal Sandbox (12-oct-2026), superada.**
+>   Pacto `d26690e0…`, 500.00 MXN: orden `045822881S794310H` → aprobación de la compradora
+>   Sandbox → captura `8PB17074MY5102817` (`COMPLETED`) registrada por el retorno → hito
+>   `PAID`; aviso firmado `PAYMENT.CAPTURE.COMPLETED` aceptado (HTTP 200) sin duplicar nada;
+>   reembolso Sandbox `7H357494PG050111J` → aviso firmado `PAYMENT.CAPTURE.REFUNDED` → pago
+>   `REFUNDED`, hito `APPROVED`, auditoría `PAYMENT_REFUNDED`. El primer aviso de reembolso
+>   no se registró (el rol de servicio no lee `payments`); corregido con la migración
+>   `202610150001_refund_by_capture.sql` y verificado reenviando el mismo evento firmado.
+> - Reversión: etiqueta `rollback/pre-pagos-2026-10-12` (`98a821d`); para apagar solo el
+>   pago, quitar `SUPABASE_SERVICE_ROLE_KEY` de Vercel y redesplegar.
 > - Suscripciones del webhook completadas con `scripts/paypal-webhook-events.mjs --apply`:
 >   faltaban `PAYMENT.CAPTURE.REFUNDED/REVERSED/DECLINED` (solo había los `PAYMENT.SALE.*`
 >   de la API v1, que una orden v2 nunca emite).
