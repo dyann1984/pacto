@@ -66,6 +66,28 @@ export function buildAnalysisPrompt(input: AnalysisInput) {
   return { system: analysisSystemPrompt, user, inputSha256 };
 }
 
+/**
+ * Clasifica un fallo del análisis para explicárselo a la persona sin culpar a su acuerdo:
+ * - `config`: credencial o modelo mal configurados (401, 403, 404). No se arregla reintentando.
+ * - `saturado`: límite de consumo o proveedor saturado (429, 529). Se arregla esperando.
+ * - `proveedor`: el proveedor falló o no respondió a tiempo (5xx, red, tiempo agotado).
+ * - `salida`: respondió, pero sin un análisis utilizable (negativa, truncado, JSON inválido).
+ *   No se muestra nada a medias.
+ */
+export type AnalysisFailure = "config" | "saturado" | "proveedor" | "salida" | "failed";
+
+export function classifyAnalysisError(error: unknown): AnalysisFailure {
+  const name = (error as Error)?.name ?? "";
+  const message = (error as Error)?.message ?? "";
+  if (message === "PROVIDER_BUSY") return "saturado";
+  if (/^PROVIDER_HTTP_(401|403|404)$/.test(message)) return "config";
+  if (/^PROVIDER_HTTP_5\d\d$/.test(message)) return "proveedor";
+  if (name === "TimeoutError" || name === "AbortError" || (name === "TypeError" && /fetch/i.test(message)))
+    return "proveedor";
+  if (["PROVIDER_REFUSAL", "PROVIDER_TRUNCATED", "INVALID_OUTPUT"].includes(message)) return "salida";
+  return "failed";
+}
+
 // Extrae el primer objeto JSON del texto del modelo y lo valida contra el esquema.
 export function parseAnalysisOutput(text: string): AgreementAnalysis {
   const start = text.indexOf("{");
