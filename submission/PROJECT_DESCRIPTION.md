@@ -17,7 +17,7 @@ Para una empresa pequeña, llevar esto a un abogado cuesta más que el propio ac
 
 ## La solución
 
-PACTO convierte un acuerdo informal en un recorrido claro con cinco pasos
+PACTO convierte un acuerdo informal en un recorrido claro con seis pasos
 verificables, que ambas partes ven igual:
 
 1. **Acuerdo creado.** El cliente define alcance, criterios de aceptación e importe.
@@ -27,8 +27,10 @@ verificables, que ambas partes ven igual:
    alcance antes de que nadie se comprometa.
 4. **Aceptado por ambas partes.** Las dos aceptan explícitamente la misma versión.
    Cualquier cambio posterior genera una versión nueva que hay que volver a aceptar.
-5. **Entrega y pago.** El proveedor presenta evidencia de cumplimiento, el cliente
-   la revisa y **autoriza explícitamente**, y solo entonces se puede pagar con PayPal.
+5. **Entrega autorizada y pago.** El proveedor presenta evidencia de cumplimiento, el
+   cliente la revisa y **autoriza explícitamente**, y solo entonces se puede pagar con
+   PayPal. Un reembolso hecho en PayPal vuelve a PACTO por webhook firmado.
+6. **Cierre confirmado.** Ambas partes confirman que la entrega se cumplió.
 
 Cada acción queda registrada con actor, fecha y versión en un historial que ninguna
 de las partes puede alterar.

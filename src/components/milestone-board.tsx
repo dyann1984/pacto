@@ -24,20 +24,27 @@ const statusLabels: Record<MilestoneRow["status"], string> = {
 };
 
 // Qué le toca hacer a cada parte en este hito. La base vuelve a exigirlo todo:
-// aquí solo se decide qué se muestra.
-function step(row: MilestoneRow, role: Role | null) {
-  if (row.status === "PAID") return { text: "El pago quedó registrado con su comprobante.", action: null };
-  if (row.status === "APPROVED")
+// aquí solo se decide qué se muestra. `nudge` dice si la otra parte tiene algo que hacer:
+// solo entonces el Modo Juez sugiere cambiar de papel.
+function step(row: MilestoneRow, role: Role | null, active: boolean, paypalReady: boolean) {
+  if (row.status === "PAID")
+    return { text: "El pago quedó registrado con su comprobante.", action: null, nudge: false };
+  if (row.status === "APPROVED") {
+    // La base rechaza pagos en un Pacto cerrado o cancelado (`PACTO_NOT_ACTIVE`).
+    if (!active)
+      return { text: "El cliente autorizó la entrega. No se pagó con PayPal antes del cierre.", action: null, nudge: false };
     return role === "BUYER"
-      ? { text: "Autorizaste este hito. Paga con PayPal cuando quieras.", action: "pay" as const }
-      : { text: "El cliente autorizó el pago. Falta que lo realice.", action: null };
+      ? { text: "Autorizaste este hito. Paga con PayPal cuando quieras.", action: "pay" as const, nudge: false }
+      : { text: "El cliente autorizó el pago. Falta que lo realice.", action: null, nudge: paypalReady };
+  }
+  if (!active) return { text: "Este hito quedó sin completar.", action: null, nudge: false };
   if (row.status === "EVIDENCE_SUBMITTED")
     return role === "BUYER"
-      ? { text: "Revisa la evidencia. Si todo está correcto, autoriza el pago.", action: "approve" as const }
-      : { text: "Presentaste la evidencia. El cliente debe revisarla.", action: null };
+      ? { text: "Revisa la evidencia. Si todo está correcto, autoriza el pago.", action: "approve" as const, nudge: false }
+      : { text: "Presentaste la evidencia. El cliente debe revisarla.", action: null, nudge: true };
   return role === "SELLER"
-    ? { text: "Describe qué entregaste para que el cliente lo revise.", action: "evidence" as const }
-    : { text: "Esperando que el proveedor presente la evidencia de entrega.", action: null };
+    ? { text: "Describe qué entregaste para que el cliente lo revise.", action: "evidence" as const, nudge: false }
+    : { text: "Esperando que el proveedor presente la evidencia de entrega.", action: null, nudge: true };
 }
 
 export function MilestoneBoard({
@@ -45,11 +52,13 @@ export function MilestoneBoard({
   rows,
   role,
   paypalReady,
+  active = true,
 }: {
   pactoId: string;
   rows: MilestoneRow[];
   role: Role | null;
   paypalReady: boolean;
+  active?: boolean;
 }) {
   return (
     <section className="card" id="entregas">
@@ -63,7 +72,7 @@ export function MilestoneBoard({
         cuál fue el resultado.
       </p>
       {rows.map((row) => {
-        const next = step(row, role);
+        const next = step(row, role, active, paypalReady);
         return (
           <article className="milestone-card" key={row.milestone_id}>
             <div className="milestone-head">
@@ -92,7 +101,7 @@ export function MilestoneBoard({
             )}
             <p>{next.text}</p>
             {/* En Modo Juez: si el paso le toca a la otra parte, se indica el cambio. */}
-            {!next.action && row.status !== "PAID" && (
+            {next.nudge && (
               <JudgeRoleNote role={row.status === "PENDING" ? "SELLER" : "BUYER"} />
             )}
 

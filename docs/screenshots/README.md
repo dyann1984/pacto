@@ -17,7 +17,7 @@ cp test-results/juez-*.png docs/screenshots/
 |---|---|
 | `juez-1-portada.png` | Página inicial: la propuesta y las tres vías de entrada |
 | `juez-2-modo-juez.png` | Modo Juez antes de empezar: qué se va a crear y por qué no es una simulación |
-| `juez-3-barra-y-pasos.png` | Barra de rol, los cinco pasos y el panel «Qué sigue» |
+| `juez-3-barra-y-pasos.png` | Barra de rol, los seis pasos y el panel «Qué sigue» |
 | `juez-4-invitacion.png` | Enlace de invitación generado, con su aviso de un solo uso y caducidad |
 | `juez-5-hitos-y-pagos.png` | Evidencia del proveedor y el botón de autorizar, visto por el cliente |
 | `juez-6-autorizado-paypal.png` | Hito ya autorizado, con el estado real de PayPal |
