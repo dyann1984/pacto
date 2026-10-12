@@ -68,30 +68,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ received: true }, { status: 200 });
   }
 
-  let orderId = resource.supplementary_data?.related_ids?.order_id;
-  if (isRefund && !orderId) {
-    // El recurso de un reembolso es el propio reembolso: identifica la captura por su
-    // enlace `up` (o es la captura misma, en una reversión) y la orden sale de PACTO.
-    const captureId = captureIdFromLinks(resource.links) ?? resource.id;
-    if (captureId) {
-      const { data } = await db
-        .from("payments")
-        .select("order_id")
-        .eq("capture_id", captureId)
-        .maybeSingle();
-      orderId = data?.order_id;
-    }
-  }
-  if (!orderId) {
+  const orderId = resource.supplementary_data?.related_ids?.order_id;
+  // El recurso de PAYMENT.CAPTURE.REFUNDED es el propio reembolso y no trae order_id (así
+  // llega de PayPal Sandbox): solo enlaza a la captura con rel "up". En una reversión el
+  // recurso es la captura misma. La base traduce captura -> orden: el rol de servicio no
+  // lee `payments` directamente, a propósito.
+  const captureId = isRefund && !orderId ? (captureIdFromLinks(resource.links) ?? resource.id) : undefined;
+  if (!orderId && !captureId) {
     console.error(`[paypal] webhook ${type}: no se identificó la orden`);
     return NextResponse.json({ received: true }, { status: 200 });
   }
 
   const { error } = isRefund
-    ? await db.rpc("record_payment_refund", {
-        p_order_id: orderId,
-        p_refund_id: resource.id ?? null,
-      })
+    ? orderId
+      ? await db.rpc("record_payment_refund", { p_order_id: orderId, p_refund_id: resource.id ?? null })
+      : await db.rpc("record_payment_refund_by_capture", { p_capture_id: captureId, p_refund_id: resource.id ?? null })
     : await db.rpc("record_payment_result", {
         p_order_id: orderId,
         p_status: status,
