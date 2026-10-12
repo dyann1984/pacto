@@ -4,6 +4,7 @@ vi.mock("server-only", () => ({}));
 
 import {
   buildAnalysisPrompt,
+  classifyAnalysisError,
   parseAnalysisOutput,
   type AnalysisInput,
 } from "@/domain/agreement-analysis";
@@ -55,6 +56,30 @@ describe("buildAnalysisPrompt", () => {
     ];
     buildAnalysisPrompt({ ...input, milestones });
     expect(milestones[0].title).toBe("B");
+  });
+});
+
+describe("classifyAnalysisError: each cause gets its own remedy", () => {
+  const err = (message: string, name = "Error") => Object.assign(new Error(message), { name });
+
+  it("configuration errors are not presented as transient", () => {
+    for (const s of ["401", "403", "404"]) expect(classifyAnalysisError(err(`PROVIDER_HTTP_${s}`))).toBe("config");
+  });
+  it("consumption limits and overload say «wait»", () => {
+    expect(classifyAnalysisError(err("PROVIDER_BUSY"))).toBe("saturado");
+  });
+  it("provider failures and timeouts say «try again later»", () => {
+    expect(classifyAnalysisError(err("PROVIDER_HTTP_500"))).toBe("proveedor");
+    expect(classifyAnalysisError(err("PROVIDER_HTTP_503"))).toBe("proveedor");
+    expect(classifyAnalysisError(err("The operation was aborted due to timeout", "TimeoutError"))).toBe("proveedor");
+    expect(classifyAnalysisError(err("fetch failed", "TypeError"))).toBe("proveedor");
+  });
+  it("an unusable answer is never shown half-done", () => {
+    for (const m of ["PROVIDER_REFUSAL", "PROVIDER_TRUNCATED", "INVALID_OUTPUT"]) expect(classifyAnalysisError(err(m))).toBe("salida");
+  });
+  it("anything else falls back to the generic failure", () => {
+    expect(classifyAnalysisError(err("PROVIDER_HTTP_400"))).toBe("failed");
+    expect(classifyAnalysisError(undefined)).toBe("failed");
   });
 });
 

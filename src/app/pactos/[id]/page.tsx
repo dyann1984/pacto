@@ -96,6 +96,18 @@ const aiMessages: Record<string, { tone: "info" | "error"; text: string }> = {
     tone: "info",
     text: "El servicio de análisis está al límite en este momento. No es un fallo del acuerdo: espera un minuto y vuelve a intentarlo.",
   },
+  config: {
+    tone: "error",
+    text: "El servicio de IA no está bien configurado (credencial o modelo). No es un problema de tu acuerdo y reintentar no lo resolverá: avisa a quien administra PACTO.",
+  },
+  proveedor: {
+    tone: "error",
+    text: "El proveedor de IA no respondió a tiempo. No se registró ningún análisis; puedes intentarlo de nuevo en unos minutos.",
+  },
+  salida: {
+    tone: "error",
+    text: "La IA respondió, pero sin un análisis completo y válido. No se muestra nada a medias; puedes intentarlo de nuevo.",
+  },
   "not-configured": {
     tone: "info",
     text: "El análisis con IA todavía no está activado. Puedes continuar con el acuerdo con normalidad.",
@@ -532,9 +544,14 @@ export default async function Center({
             (aiReady ? (
               <form action={runAgreementAnalysis}>
                 {fields("analyze")}
-                <button className="button button-light">
+                {/* Un análisis tarda de segundos a un minuto: sin estado de carga la persona
+                    vuelve a pulsar, y cada llamada al proveedor se paga. */}
+                <SubmitButton
+                  className="button button-light"
+                  pendingText="Analizando el acuerdo… puede tardar hasta un minuto"
+                >
                   Analizar versión {current.version}
-                </button>
+                </SubmitButton>
               </form>
             ) : (
               <p className="notice notice-info" role="status">
@@ -544,7 +561,10 @@ export default async function Center({
             ))}
           {analysis && latestAnalysis ? (
             <div className="analysis">
-              <p className="fine-print">Analizado el {dateTime(latestAnalysis.created_at)}</p>
+              <p className="fine-print">
+                Analizado el {dateTime(latestAnalysis.created_at)} por {latestAnalysis.model}{" "}
+                (Anthropic), sobre la versión {current.version} del acuerdo.
+              </p>
               <p>{analysis.summary}</p>
               {analysis.findings.length === 0 && (
                 <p className="fine-print">No se detectaron hallazgos.</p>

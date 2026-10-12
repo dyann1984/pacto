@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { requireSession } from "@/lib/session";
 import { createPactoSchema } from "@/domain/foundation";
 import { analyzeAgreement } from "@/lib/ai";
+import { classifyAnalysisError } from "@/domain/agreement-analysis";
 import { requestOrigin } from "@/lib/origin";
 import { createOrder, isPayPalConfigured } from "@/lib/paypal";
 import { isSettlementConfigured } from "@/lib/supabase-service";
@@ -349,10 +350,12 @@ export async function runAgreementAnalysis(form: FormData) {
       milestones: milestones ?? [],
     });
   } catch (error) {
-    // Un límite de consumo o un proveedor saturado se arreglan esperando; decirlo evita
-    // que la persona reintente en bucle creyendo que el módulo está roto.
-    const busy = (error as Error)?.message === "PROVIDER_BUSY";
-    redirect(`/pactos/${pactoId}?ai=${busy ? "saturado" : "failed"}`);
+    // Cada causa tiene un remedio distinto (esperar, reintentar o avisar a quien administra);
+    // confundirlas lleva a reintentar en bucle o a creer que el acuerdo tiene un problema.
+    const failure = classifyAnalysisError(error);
+    // Solo el código: nunca el cuerpo del proveedor ni la clave.
+    console.error(`[ia] análisis fallido: ${failure} (${(error as Error)?.message ?? "sin mensaje"})`);
+    redirect(`/pactos/${pactoId}?ai=${failure}`);
   }
   if (outcome.status === "NOT_CONFIGURED")
     redirect(`/pactos/${pactoId}?ai=not-configured`);
