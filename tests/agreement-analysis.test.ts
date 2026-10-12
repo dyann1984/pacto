@@ -42,6 +42,11 @@ describe("buildAnalysisPrompt", () => {
     const prompt = buildAnalysisPrompt(input);
     expect(prompt.user).toContain("<acuerdo>");
     expect(prompt.user).toContain("Impermeabilizar la cubierta");
+    // El importe y los hitos van como parte del acuerdo, no como contexto a ignorar: con la
+    // regla anterior («analiza únicamente <acuerdo>») el modelo afirmaba que faltaba el precio.
+    expect(prompt.user).toMatch(/<datos_registrados>[\s\S]*17,400\.00[\s\S]*<\/datos_registrados>/);
+    expect(prompt.system).toContain("No señales como ausente lo que aparece en <datos_registrados>");
+    expect(prompt.system).toContain("se paga con PayPal solo después");
     expect(prompt.inputSha256).toMatch(/^[0-9a-f]{64}$/);
     expect(buildAnalysisPrompt(input).inputSha256).toBe(prompt.inputSha256);
     expect(
