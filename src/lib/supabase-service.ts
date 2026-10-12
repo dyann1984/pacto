@@ -21,9 +21,9 @@ export function isSettlementConfigured() {
  * cerrado en vez de operar a medias. La clave nunca sale de este módulo y jamás
  * se expone al navegador: no lleva el prefijo NEXT_PUBLIC_.
  *
- * Aunque este cliente puede saltarse RLS, la única función que ejecuta es
- * `record_payment_result`, que solo acepta órdenes ya registradas por PACTO y
- * es idempotente.
+ * Aunque este cliente puede saltarse RLS, solo ejecuta `record_payment_result` y
+ * `record_payment_refund`, que aceptan únicamente órdenes ya registradas por PACTO y
+ * son idempotentes.
  */
 export function supabaseService() {
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
