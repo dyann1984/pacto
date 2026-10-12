@@ -53,7 +53,8 @@ test("a judge completes create → invite → join → accept → evidence → a
   // 5. El cliente NO puede autorizar sin evidencia: el servidor manda, no la barra.
   await expect(page.getByRole("heading", { name: "Entregas y pagos" })).toBeVisible();
   await expect(page.getByRole("button", { name: /Autorizar el pago/ })).toHaveCount(0);
-  await expect(page.getByText(/este paso le toca al proveedor/)).toBeVisible();
+  // La indicación aparece también en «Qué sigue»: se comprueba la del tablero.
+  await expect(page.locator("#entregas").getByText(/este paso le toca al proveedor/)).toBeVisible();
 
   // 6. Evidencia como proveedor.
   await actAs(page, "proveedor");

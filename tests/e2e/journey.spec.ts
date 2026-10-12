@@ -72,10 +72,15 @@ test("two DEMO visitors complete create → invite → join → review → accep
     const payButton = buyer.getByRole("button", { name: /Pagar .* con PayPal/ });
     if ((await payButton.count()) === 0) {
       await expect(buyer.getByText(/El pago con PayPal todavía no está activado/)).toBeVisible();
+    } else {
+      // Con PayPal activo se pide pagar antes de cerrar: un Pacto cerrado no admite pagos.
+      await expect(
+        buyer.getByRole("heading", { name: "Paga con PayPal y después confirma el cierre" }),
+      ).toBeVisible();
     }
 
-    // 6. Ambas confirman el cierre.
-    await expect(buyer.getByRole("heading", { name: /Confirma el cierre/ })).toBeVisible();
+    // 6. Ambas confirman el cierre (cerrar sigue permitido aunque no se haya pagado).
+    await expect(buyer.getByRole("heading", { name: /confirma el cierre/i })).toBeVisible();
     await buyer.locator('textarea[name="note"]').fill("Entrega revisada en el recorrido DEMO");
     await buyer.getByRole("button", { name: "Confirmar cierre" }).click();
     await expect(buyer.getByText("Esperando que la otra parte confirme el cierre")).toBeVisible();
