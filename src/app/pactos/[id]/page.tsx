@@ -96,6 +96,14 @@ const aiMessages: Record<string, { tone: "info" | "error"; text: string }> = {
     tone: "info",
     text: "El servicio de análisis está al límite en este momento. No es un fallo del acuerdo: espera un minuto y vuelve a intentarlo.",
   },
+  cupo: {
+    tone: "info",
+    text: "Alcanzaste el máximo de 6 análisis con IA en 24 horas. Es un límite de consumo, no un fallo: el resto del recorrido sigue disponible y podrás analizar de nuevo más tarde.",
+  },
+  "cupo-global": {
+    tone: "info",
+    text: "El análisis con IA alcanzó su límite de uso de esta hora para todos los usuarios. Es un límite de consumo, no un fallo: vuelve a intentarlo en unos minutos.",
+  },
   config: {
     tone: "error",
     text: "El servicio de IA no está bien configurado (credencial o modelo). No es un problema de tu acuerdo y reintentar no lo resolverá: avisa a quien administra PACTO.",
