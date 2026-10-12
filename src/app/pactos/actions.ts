@@ -1,4 +1,5 @@
 "use server";
+import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
@@ -274,14 +275,22 @@ export async function startPayment(form: FormData) {
   if (milestone.status !== "APPROVED") redirect(`/pactos/${pactoId}?pago=APPROVAL_REQUIRED`);
 
   const origin = await requestOrigin();
-  const order = await createOrder({
-    amountCents: milestone.amount_cents,
-    currency: "MXN",
-    reference: milestone.id,
-    description: `PACTO · ${milestone.title}`,
-    returnUrl: `${origin}/pactos/${pactoId}/pago?milestone=${milestone.id}`,
-    cancelUrl: `${origin}/pactos/${pactoId}?pago=cancelado`,
-  });
+  // Clave de idempotencia por intento, no por hito: con la del hito, un reintento tras
+  // cancelar o tras un reembolso recibía de PayPal la orden antigua. Los dobles clics ya
+  // los frena la base (un solo pago vivo por hito).
+  const order = await createOrder(
+    {
+      amountCents: milestone.amount_cents,
+      currency: "MXN",
+      reference: milestone.id,
+      description: `PACTO · ${milestone.title}`,
+      returnUrl: `${origin}/pactos/${pactoId}/pago?milestone=${milestone.id}`,
+      // PayPal añade `token=<orderId>`: el retorno cierra la orden cancelada.
+      cancelUrl: `${origin}/pactos/${pactoId}/pago?cancelado=1`,
+    },
+    fetch,
+    `${milestone.id}-${randomUUID()}`,
+  );
   if (order.status === "NOT_CONFIGURED") redirect(`/pactos/${pactoId}?pago=no-configurado`);
   if (order.status === "ERROR") {
     console.error(`[paypal] createOrder -> ${order.code}`);

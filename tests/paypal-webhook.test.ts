@@ -15,6 +15,10 @@ const verifyWebhook = vi.fn();
 const isConfigured = vi.fn();
 const rpc = vi.fn();
 const supabaseService = vi.fn();
+// Búsqueda de la orden por captura (`payments.capture_id`), para reembolsos.
+const lookup = vi.fn();
+const eq = vi.fn(() => ({ maybeSingle: lookup }));
+const from = vi.fn(() => ({ select: () => ({ eq }) }));
 
 vi.mock("@/lib/paypal", () => ({ verifyWebhook }));
 vi.mock("@/lib/supabase", () => ({ isConfigured }));
@@ -43,9 +47,12 @@ beforeEach(() => {
   isConfigured.mockReset();
   rpc.mockReset();
   supabaseService.mockReset();
+  lookup.mockReset();
+  eq.mockClear();
   isConfigured.mockReturnValue(true);
   rpc.mockResolvedValue({ error: null });
-  supabaseService.mockReturnValue({ rpc });
+  lookup.mockResolvedValue({ data: null, error: null });
+  supabaseService.mockReturnValue({ rpc, from });
 });
 
 describe("webhook de PayPal: la firma es la única autorización", () => {
@@ -102,6 +109,49 @@ describe("webhook de PayPal: la firma es la única autorización", () => {
         p_refund_id: "CAPTURE-9",
       });
     }
+  });
+
+  it("treats DECLINED (Payments v2 name) like DENIED", async () => {
+    verifyWebhook.mockResolvedValue(true);
+    await POST(post({ ...captureCompleted, event_type: "PAYMENT.CAPTURE.DECLINED" }));
+    expect(rpc).toHaveBeenCalledWith("record_payment_result", {
+      p_order_id: "ORDER-9",
+      p_status: "FAILED",
+      p_capture_id: null,
+    });
+  });
+
+  // El recurso de PAYMENT.CAPTURE.REFUNDED es el reembolso, no la captura: puede no traer
+  // el order_id. La orden se obtiene de la captura enlazada con rel "up".
+  it("resolves a refund without order_id through the capture it points to", async () => {
+    verifyWebhook.mockResolvedValue(true);
+    lookup.mockResolvedValue({ data: { order_id: "ORDER-9" }, error: null });
+    const refund = {
+      event_type: "PAYMENT.CAPTURE.REFUNDED",
+      resource: {
+        id: "REFUND-1",
+        links: [
+          { rel: "self", href: "https://api.sandbox.paypal.com/v2/payments/refunds/REFUND-1" },
+          { rel: "up", href: "https://api.sandbox.paypal.com/v2/payments/captures/CAPTURE-9" },
+        ],
+      },
+    };
+    expect((await POST(post(refund))).status).toBe(200);
+    expect(eq).toHaveBeenCalledWith("capture_id", "CAPTURE-9");
+    expect(rpc).toHaveBeenCalledWith("record_payment_refund", {
+      p_order_id: "ORDER-9",
+      p_refund_id: "REFUND-1",
+    });
+  });
+
+  it("writes nothing when a refund points to a capture PACTO does not know", async () => {
+    verifyWebhook.mockResolvedValue(true);
+    const refund = {
+      event_type: "PAYMENT.CAPTURE.REFUNDED",
+      resource: { id: "REFUND-2", links: [{ rel: "up", href: "https://x/v2/payments/captures/AJENA-1" }] },
+    };
+    expect((await POST(post(refund))).status).toBe(200);
+    expect(rpc).not.toHaveBeenCalled();
   });
 
   it("returns 400 on a verified notification whose body is not JSON", async () => {

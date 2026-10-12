@@ -1,5 +1,23 @@
 # Despliegue en Vercel
 
+> **Actualización del 12 de octubre de 2026.**
+> - `production` = `98a821d`: reembolsos (`251c899`) y la guía de pagar antes de cerrar
+>   (`625a234`). Verificado con HTTP y con el recorrido del Modo Juez en producción.
+> - **Migración `202610140001_refunds.sql` aplicada** en la base real, con respaldo previo
+>   (fuera del repositorio). Comprobado después: columnas `refund_id` y `refunded_at`, CHECK
+>   con `REFUNDED`, `record_payment_refund` ejecutable solo por `service_role`, RLS en las 12
+>   tablas, 27 políticas y datos intactos. Una segunda ejecución aborta con
+>   `MIGRATION_ALREADY_APPLIED`.
+> - **Variables de Vercel (Production):** las credenciales PayPal Sandbox se guardaron con
+>   `scripts/set-paypal-sandbox.mjs`, que las valida contra PayPal (token, propiedad del
+>   webhook `0BY007329M302654B`, URL y eventos) antes de escribirlas.
+> - **Ojo:** `vercel env pull` no devuelve las variables *sensibles*: entrega un marcador
+>   fijo de 11 caracteres, así que no sirve para comparar ni para probar sus valores.
+>   Para validarlas, usar `.env.local` (mismos valores) o el comportamiento en producción.
+> - Suscripciones del webhook completadas con `scripts/paypal-webhook-events.mjs --apply`:
+>   faltaban `PAYMENT.CAPTURE.REFUNDED/REVERSED/DECLINED` (solo había los `PAYMENT.SALE.*`
+>   de la API v1, que una orden v2 nunca emite).
+
 **Estado al 10 de octubre de 2026.** El proyecto está desplegado y accesible en
 https://pacto-pearl.vercel.app, vinculado al proyecto Vercel `pacto`
 (`.vercel/project.json`).
