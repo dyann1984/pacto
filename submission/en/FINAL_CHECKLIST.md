@@ -45,10 +45,10 @@ Deadline: 12 November 2026, 12:00 PT.
 |---|---|---|---|
 | 3.1 | Spanish UI preserved | **PASS** | No i18n migration, no string changes. 463 Spanish strings in 48 files untouched. |
 | 3.2 | English navigation documented | **PASS** | `JUDGE_INSTRUCTIONS.md` translates every button in a 7-step walkthrough. |
-| 3.3 | Judge Mode functional | **PASS** | 5 Nov 2026: `judge.spec.ts` full run (create → invite → join → accept → evidence → authorize → close) and RLS isolation of the two judge identities pass against the restored project. Phone-size and restart specs could not complete in that run only because the anonymous sign-in quota (30/hour/IP) was exhausted by two full suite runs; the app showed its "Demasiadas sesiones" notice. Re-run after the quota resets. |
+| 3.3 | Judge Mode functional | **PASS** | 5 Nov 2026: `judge.spec.ts` full run (create → invite → join → accept → evidence → authorize → close) and RLS isolation of the two judge identities pass against the restored project. Phone-size and restart specs initially could not complete only because the anonymous sign-in quota (30/hour/IP) was exhausted by two full suite runs. **Re-run on 5 Nov 2026 after the quota reset (only those two specs, no limits changed): both PASS** — "restarting the demo creates a fresh, separate scenario" (12.4s) and "judge mode works on a phone-sized screen" (4.1s). Production `https://pacto-pearl.vercel.app/juez` returns 200. |
 | 3.4 | Demo link accessible | **PASS** | `https://pacto-pearl.vercel.app` returns HTTP 200 (Vercel CDN). |
 
-**Action needed for 3.3:** Restore the Supabase project from the dashboard.
+No action needed for 3.3: the Supabase project was resumed on 5 Nov 2026 (see 9.1).
 
 ---
 
@@ -97,7 +97,7 @@ Deadline: 12 November 2026, 12:00 PT.
 | 7.1 | TypeScript strict mode | **PASS** | `pnpm typecheck` — 0 errors. |
 | 7.2 | Vitest (225 tests, 24 files) | **PASS** | All pass in 52.5s. Domain, auth, RLS, PayPal, AI, migrations. |
 | 7.3 | ESLint | **PASS** | `pnpm lint` — exit 0 (previous run). |
-| 7.4 | Playwright E2E (38 specs) | **PARTIAL** | 5 Nov 2026 with `PACTO_E2E_AI=configured`: 33 passed, 3 skipped by design (screenshots, real e-mail sign-up), 2 failed (`judge.spec.ts` restart + phone) due to the anonymous sign-in quota, not a defect. First run without the flag: 30 passed + 1 expected failure (the AI spec checks the "not configured" branch, but AI is live). Re-run `judge.spec.ts` after ~1 hour to close. |
+| 7.4 | Playwright E2E (38 specs) | **PASS** | 5 Nov 2026 with `PACTO_E2E_AI=configured`: 33 passed, 3 skipped by design (screenshots, real e-mail sign-up), 2 failed (`judge.spec.ts` restart + phone) due to the anonymous sign-in quota, not a defect. Those two were re-run alone after the quota reset and both pass → 35 passed, 3 skipped by design, 0 failed. (Without the AI flag, the AI spec's "not configured" branch fails by design because AI is live.) |
 
 ---
 
@@ -135,10 +135,10 @@ Deadline: 12 November 2026, 12:00 PT.
 | PayPal integration | 6 | 0 | 0 |
 | AI integration | 5 | 0 | 0 |
 | Security and data integrity | 6 | 0 | 0 |
-| Tests | 3 | 0 | 0 (1 partial: 7.4) |
-| Video and Devpost | 3 | 0 | 3 |
+| Tests | 4 | 0 | 0 |
+| Video and Devpost | 4 | 0 | 2 |
 | Supabase project | 3 | 0 | 0 |
-| **Total** | **43** | **0** | **3** (+1 partial) |
+| **Total** | **44** | **0** | **2** |
 
 ## Critical path to submission
 
@@ -146,7 +146,7 @@ Deadline: 12 November 2026, 12:00 PT.
 2. ~~Add LICENSE to default branch~~ — done (`693a0f3`)
 3. **Record video** (human task, ~30 min including editing) — fixes 8.4
 4. **Upload to YouTube as Public** — fixes 8.6
-5. **Re-run `judge.spec.ts`** after the anonymous sign-in quota resets (~1 hour) — closes 7.4
+5. ~~Re-run the two pending `judge.spec.ts` specs~~ — done 5 Nov 2026, both pass (7.4)
 6. **Submit on Devpost** with all links
 
 
