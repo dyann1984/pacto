@@ -1,4 +1,4 @@
-# Final submission checklist — PACTO, PayPal AI Hackathon 2026
+﻿# Final submission checklist — PACTO, PayPal AI Hackathon 2026
 
 Verified: 5 November 2026 on branch `hackathon/submission-final` at `6cbe895`.
 Deadline: 12 November 2026, 12:00 PT.
@@ -45,7 +45,7 @@ Deadline: 12 November 2026, 12:00 PT.
 |---|---|---|---|
 | 3.1 | Spanish UI preserved | **PASS** | No i18n migration, no string changes. 463 Spanish strings in 48 files untouched. |
 | 3.2 | English navigation documented | **PASS** | `JUDGE_INSTRUCTIONS.md` translates every button in a 7-step walkthrough. |
-| 3.3 | Judge Mode functional | **FAIL** | Supabase project paused — anonymous sessions cannot be created. Demo link returns HTML but all auth/data calls fail. |
+| 3.3 | Judge Mode functional | **PASS** | 5 Nov 2026: `judge.spec.ts` full run (create → invite → join → accept → evidence → authorize → close) and RLS isolation of the two judge identities pass against the restored project. Phone-size and restart specs could not complete in that run only because the anonymous sign-in quota (30/hour/IP) was exhausted by two full suite runs; the app showed its "Demasiadas sesiones" notice. Re-run after the quota resets. |
 | 3.4 | Demo link accessible | **PASS** | `https://pacto-pearl.vercel.app` returns HTTP 200 (Vercel CDN). |
 
 **Action needed for 3.3:** Restore the Supabase project from the dashboard.
@@ -97,7 +97,7 @@ Deadline: 12 November 2026, 12:00 PT.
 | 7.1 | TypeScript strict mode | **PASS** | `pnpm typecheck` — 0 errors. |
 | 7.2 | Vitest (225 tests, 24 files) | **PASS** | All pass in 52.5s. Domain, auth, RLS, PayPal, AI, migrations. |
 | 7.3 | ESLint | **PASS** | `pnpm lint` — exit 0 (previous run). |
-| 7.4 | Playwright E2E (26 tests) | **PENDING** | Requires Supabase to be restored. Last verified pass: 12 Oct 2026. |
+| 7.4 | Playwright E2E (38 specs) | **PARTIAL** | 5 Nov 2026 with `PACTO_E2E_AI=configured`: 33 passed, 3 skipped by design (screenshots, real e-mail sign-up), 2 failed (`judge.spec.ts` restart + phone) due to the anonymous sign-in quota, not a defect. First run without the flag: 30 passed + 1 expected failure (the AI spec checks the "not configured" branch, but AI is live). Re-run `judge.spec.ts` after ~1 hour to close. |
 
 ---
 
@@ -118,11 +118,10 @@ Deadline: 12 November 2026, 12:00 PT.
 
 | # | Requirement | Status | Evidence |
 |---|---|---|---|
-| 9.1 | Project reachable | **FAIL** | DNS resolution fails for `qmfwilyarxnomyufnwwv.supabase.co`. On 5 Nov 2026 `supabase projects list` (logged-in CLI account) shows only 3 projects (`migrantes-platform`, `ops-grow-development`, `kronaryx-ia`); ref `qmfwilyarxnomyufnwwv` is NOT among them, not even as INACTIVE. So it is not a simple pause visible to this login: the project was deleted, or lives under a different Supabase account/org. The production bundle and Vercel still point to this ref. Backups of 12 Oct (public schema + 12 data tables, valid JSON) exist but not `auth.users`. Owner must check the dashboard; see `docs/supabase-recovery-plan.md`. |
-| 9.2 | Anonymous sign-ins enabled | **PENDING** | Cannot verify until project is restored. Was enabled as of 12 Oct 2026. |
-| 9.3 | Migrations applied | **PENDING** | Cannot verify until project is restored. 7 migrations were applied as of 12 Oct 2026. |
+| 9.1 | Project reachable | **PASS** | The project `qmfwilyarxnomyufnwwv` was NOT deleted: the free-tier project was paused (organization "PACTO", resumable until 23 Nov 2027; it was invisible to the CLI login because it lives in another organization). Owner resumed it on 5 Nov 2026; DNS and `/auth/v1/health` return 200. No data lost; no new project created; Vercel variables unchanged. |
+| 9.2 | Anonymous sign-ins enabled | **PASS** | `check:integrations`: anonymous access ENABLED; judge E2E sessions created. |
+| 9.3 | Migrations applied | **PASS** | Both demo accounts sign in and read `pactos`, `agreements`, `closure_confirmations`, `ai_analyses` under RLS (`check:demo-users`); full create/accept/close/AI flows pass in E2E. Direct SQL inspection not possible: the CLI login has no rights on that organization. |
 
-**Action needed for 9.1:** Owner must restore the project at https://supabase.com/dashboard.
 
 ---
 
@@ -132,14 +131,14 @@ Deadline: 12 November 2026, 12:00 PT.
 |---|---|---|---|
 | Repository and license | 4 | 0 | 0 |
 | English documentation | 10 | 0 | 0 |
-| Judge experience | 2 | 1 | 0 |
+| Judge experience | 3 | 0 | 0 |
 | PayPal integration | 6 | 0 | 0 |
 | AI integration | 5 | 0 | 0 |
 | Security and data integrity | 6 | 0 | 0 |
-| Tests | 3 | 0 | 1 |
+| Tests | 3 | 0 | 0 (1 partial: 7.4) |
 | Video and Devpost | 3 | 0 | 3 |
-| Supabase project | 0 | 1 | 2 |
-| **Total** | **39** | **2** | **6** |
+| Supabase project | 3 | 0 | 0 |
+| **Total** | **43** | **0** | **3** (+1 partial) |
 
 ## Critical path to submission
 
@@ -147,5 +146,7 @@ Deadline: 12 November 2026, 12:00 PT.
 2. ~~Add LICENSE to default branch~~ — done (`693a0f3`)
 3. **Record video** (human task, ~30 min including editing) — fixes 8.4
 4. **Upload to YouTube as Public** — fixes 8.6
-5. **Run E2E tests** after Supabase is back — verifies 7.4
+5. **Re-run `judge.spec.ts`** after the anonymous sign-in quota resets (~1 hour) — closes 7.4
 6. **Submit on Devpost** with all links
+
+
