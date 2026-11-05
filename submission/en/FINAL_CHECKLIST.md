@@ -142,11 +142,12 @@ Deadline: 12 November 2026, 12:00 PT.
 
 ## Critical path to submission
 
-1. **Locate or restore the Supabase project** (owner action; see 9.1 — it is missing from the CLI account's project list) — unblocks 3.3, 7.4, 8.4, 9.1–9.3
+1. ~~Locate or restore the Supabase project~~ - done: it was paused and resumed on 5 Nov 2026 (see 9.1)
 2. ~~Add LICENSE to default branch~~ — done (`693a0f3`)
 3. **Record video** (human task, ~30 min including editing) — fixes 8.4
 4. **Upload to YouTube as Public** — fixes 8.6
 5. **Re-run `judge.spec.ts`** after the anonymous sign-in quota resets (~1 hour) — closes 7.4
 6. **Submit on Devpost** with all links
+
 
 
