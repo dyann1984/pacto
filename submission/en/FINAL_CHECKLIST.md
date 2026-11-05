@@ -16,11 +16,9 @@ Deadline: 12 November 2026, 12:00 PT.
 | # | Requirement | Status | Evidence |
 |---|---|---|---|
 | 1.1 | Public repository | **PASS** | `gh repo view --json isPrivate` → `false`. URL: https://github.com/dyann1984/pacto |
-| 1.2 | LICENSE file in repo | **FAIL** | MIT LICENSE exists on `production` and `hackathon/submission-final`, but NOT on the default branch `contest/cierre-ia-mvp`. GitHub API returns `license: null`. Judges and the Devpost bot read the default branch. |
+| 1.2 | LICENSE file in repo | **PASS** | MIT LICENSE added to the default branch `contest/cierre-ia-mvp` in commit `693a0f3` (pushed 5 Nov 2026). Owner confirmed directly on GitHub that the API returns `spdx_id: MIT`. |
 | 1.3 | All dependencies MIT/Apache-2.0 | **PASS** | 7 prod + 8 dev dependencies, all MIT or Apache-2.0. No copyleft. |
 | 1.4 | No secrets in repo | **PASS** | `pnpm check:secrets` — 42 bundle files + 163 tracked files scanned, 0 leaks. |
-
-**Action needed for 1.2:** Add LICENSE to `contest/cierre-ia-mvp` (minimal cherry-pick or direct commit). Requires owner authorization.
 
 ---
 
@@ -120,7 +118,7 @@ Deadline: 12 November 2026, 12:00 PT.
 
 | # | Requirement | Status | Evidence |
 |---|---|---|---|
-| 9.1 | Project reachable | **FAIL** | DNS resolution fails for `qmfwilyarxnomyufnwwv.supabase.co`. Free-tier project paused after ~24 days of inactivity (last activity: 12 Oct 2026). |
+| 9.1 | Project reachable | **FAIL** | DNS resolution fails for `qmfwilyarxnomyufnwwv.supabase.co`. On 5 Nov 2026 `supabase projects list` (logged-in CLI account) shows only 3 projects (`migrantes-platform`, `ops-grow-development`, `kronaryx-ia`); ref `qmfwilyarxnomyufnwwv` is NOT among them, not even as INACTIVE. So it is not a simple pause visible to this login: the project was deleted, or lives under a different Supabase account/org. Owner must check the dashboard. |
 | 9.2 | Anonymous sign-ins enabled | **PENDING** | Cannot verify until project is restored. Was enabled as of 12 Oct 2026. |
 | 9.3 | Migrations applied | **PENDING** | Cannot verify until project is restored. 7 migrations were applied as of 12 Oct 2026. |
 
@@ -132,7 +130,7 @@ Deadline: 12 November 2026, 12:00 PT.
 
 | Category | PASS | FAIL | PENDING |
 |---|---|---|---|
-| Repository and license | 3 | 1 | 0 |
+| Repository and license | 4 | 0 | 0 |
 | English documentation | 10 | 0 | 0 |
 | Judge experience | 2 | 1 | 0 |
 | PayPal integration | 6 | 0 | 0 |
@@ -141,12 +139,12 @@ Deadline: 12 November 2026, 12:00 PT.
 | Tests | 3 | 0 | 1 |
 | Video and Devpost | 3 | 0 | 3 |
 | Supabase project | 0 | 1 | 2 |
-| **Total** | **38** | **3** | **6** |
+| **Total** | **39** | **2** | **6** |
 
 ## Critical path to submission
 
-1. **Restore Supabase project** (owner action, ~2 min) — unblocks 3.3, 7.4, 8.4, 9.1–9.3
-2. **Add LICENSE to default branch** (owner authorization needed) — fixes 1.2
+1. **Locate or restore the Supabase project** (owner action; see 9.1 — it is missing from the CLI account's project list) — unblocks 3.3, 7.4, 8.4, 9.1–9.3
+2. ~~Add LICENSE to default branch~~ — done (`693a0f3`)
 3. **Record video** (human task, ~30 min including editing) — fixes 8.4
 4. **Upload to YouTube as Public** — fixes 8.6
 5. **Run E2E tests** after Supabase is back — verifies 7.4
