@@ -96,14 +96,14 @@ no se puede verificar no debe cambiar el estado de un pago.
    `PAYMENT.CAPTURE.COMPLETED`, `PAYMENT.CAPTURE.DENIED` y `PAYMENT.CAPTURE.REFUNDED`.
 4. Guarda. PayPal muestra entonces un **Webhook ID**; ese es el valor.
 
-> **Reembolsos: no implementados.** PACTO verifica la firma de
-> `PAYMENT.CAPTURE.REFUNDED` y responde 200, pero no revierte el hito: no existe un
-> estado `REFUNDED` en `payments` ni una RPC que lo registre. Conviene suscribir el
-> evento igualmente para no perder el aviso el día que se implemente, pero hoy un
-> reembolso hecho en PayPal deja el hito como `PAID` en PACTO. Lo mismo ocurre con
-> `PAYMENT.CAPTURE.REVERSED` después de una captura: `record_payment_result` devuelve
-> `ALREADY_CAPTURED` y no cambia nada. Ambos casos están fijados en
-> `tests/paypal-webhook.test.ts` y `tests/payments.rls.test.ts`.
+> **Reembolsos: implementados.** Las migraciones `202610140001_refunds.sql` y
+> `202610150001_refund_by_capture.sql` añaden el estado `REFUNDED` a `payments` y la
+> RPC `record_refund_result`. PACTO verifica la firma de `PAYMENT.CAPTURE.REFUNDED`,
+> busca la captura original y registra el reembolso. Verificado con PayPal Sandbox el
+> 12 de octubre de 2026. Suscribir también `PAYMENT.CAPTURE.REVERSED` para futuras
+> reversiones; hoy `record_payment_result` devuelve `ALREADY_CAPTURED` sin cambiar
+> nada. Ambos casos están cubiertos en `tests/paypal-webhook.test.ts` y
+> `tests/payments.rls.test.ts`.
 
 ```ini
 PAYPAL_WEBHOOK_ID=...
@@ -116,8 +116,8 @@ escribir el resultado del pago sin una sesión de usuario.
 
 ## 3. `SUPABASE_SERVICE_ROLE_KEY`
 
-**Comprobado el 10 de octubre de 2026: no está configurada** — ni en
-`.env.local`, ni como variable de entorno del usuario o de la máquina.
+**Comprobado el 12 de octubre de 2026: configurada** en `.env.local` y en
+Vercel (como variable Sensitive).
 
 Da acceso total a la base de datos saltándose RLS. Trátala como una contraseña
 maestra.
