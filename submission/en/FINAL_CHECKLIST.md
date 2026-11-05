@@ -118,7 +118,7 @@ Deadline: 12 November 2026, 12:00 PT.
 
 | # | Requirement | Status | Evidence |
 |---|---|---|---|
-| 9.1 | Project reachable | **FAIL** | DNS resolution fails for `qmfwilyarxnomyufnwwv.supabase.co`. On 5 Nov 2026 `supabase projects list` (logged-in CLI account) shows only 3 projects (`migrantes-platform`, `ops-grow-development`, `kronaryx-ia`); ref `qmfwilyarxnomyufnwwv` is NOT among them, not even as INACTIVE. So it is not a simple pause visible to this login: the project was deleted, or lives under a different Supabase account/org. Owner must check the dashboard. |
+| 9.1 | Project reachable | **FAIL** | DNS resolution fails for `qmfwilyarxnomyufnwwv.supabase.co`. On 5 Nov 2026 `supabase projects list` (logged-in CLI account) shows only 3 projects (`migrantes-platform`, `ops-grow-development`, `kronaryx-ia`); ref `qmfwilyarxnomyufnwwv` is NOT among them, not even as INACTIVE. So it is not a simple pause visible to this login: the project was deleted, or lives under a different Supabase account/org. The production bundle and Vercel still point to this ref. Backups of 12 Oct (public schema + 12 data tables, valid JSON) exist but not `auth.users`. Owner must check the dashboard; see `docs/supabase-recovery-plan.md`. |
 | 9.2 | Anonymous sign-ins enabled | **PENDING** | Cannot verify until project is restored. Was enabled as of 12 Oct 2026. |
 | 9.3 | Migrations applied | **PENDING** | Cannot verify until project is restored. 7 migrations were applied as of 12 Oct 2026. |
 
