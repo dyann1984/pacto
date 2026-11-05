@@ -119,7 +119,7 @@ pnpm test                 # 225 tests: domain, authorization, and RLS
 pnpm check:secrets        # no secrets in the client bundle or the repo
 pnpm check:integrations   # real calls to each provider
 pnpm build
-pnpm exec playwright test # 26 end-to-end tests in a real browser
+pnpm exec playwright test # 38 end-to-end specs in a real browser
 ```
 
 The RLS tests run the real migrations against an in-memory PostgreSQL (PGlite),

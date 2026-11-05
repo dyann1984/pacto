@@ -72,12 +72,16 @@ Playwright, including the complete Judge Mode journey.
   does not even render for the supplier, but even if it did, the server would
   reject it. Judges can verify this in seconds.
 - **225 automated tests**, including RLS tests against real PostgreSQL
-  (PGlite), 14 PayPal tests, 9 AI tests, and 26 end-to-end browser tests.
+  (PGlite), 16 PayPal tests plus 12 for the webhook, 14 AI-analysis tests plus 5
+  for its quota, and 38 end-to-end browser specs (35 passing, 3 skipped by design
+  in the last full run).
 - **Zero secrets exposed.** `check:secrets` scans the client bundle and all
   tracked files on every build.
 - **Full end-to-end verification in production** on 12 October 2026: a real
   Anthropic analysis, a real PayPal Sandbox capture of 25,000 MXN with its
-  signed webhook, and closure by both parties.
+  signed webhook, and closure by both parties. Repeated on 5 November 2026: one
+  Sandbox capture of 25,000 MXN (confirmed through the PayPal API and in the
+  database) and closure by both parties.
 
 ## What we learned
 

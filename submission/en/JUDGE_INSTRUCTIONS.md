@@ -87,12 +87,14 @@ pnpm build && pnpm start
 The automated evidence:
 
 ```bash
-pnpm test                               # 156 unit, authorization and RLS tests
-pnpm build && pnpm exec playwright test # 25 end-to-end tests in a real browser
+pnpm test                               # 225 unit, authorization and RLS tests
+pnpm build && pnpm exec playwright test # 38 end-to-end specs in a real browser
 ```
 
-(Ten further end-to-end tests are skipped without optional demo credentials; see
-`docs/credentials-setup.md`.)
+(Some end-to-end specs need optional demo credentials and three are skipped by
+design — screenshots and real e-mail sign-up; see `docs/credentials-setup.md`.
+Judge Mode creates anonymous sessions, so running the whole suite twice within an
+hour can exhaust Supabase's 30-per-hour limit.)
 
 The RLS tests run the real migrations against an in-memory PostgreSQL (PGlite),
 so the security policies are exercised for real rather than against test doubles.
@@ -109,8 +111,8 @@ being present in the deployment — no code changes are involved.
 
 | Integration | Code | Live in the hosted demo |
 |---|---|---|
-| PayPal Orders v2 (Sandbox) | `src/lib/paypal.ts`, 14 tests | See the badge on the "Entregas y pagos" card |
-| Anthropic agreement analysis | `src/lib/ai.ts`, 9 tests | See the "Análisis con IA" card |
+| PayPal Orders v2 (Sandbox) | `src/lib/paypal.ts`, 16 tests + 12 webhook tests | See the badge on the "Entregas y pagos" card |
+| Anthropic agreement analysis | `src/lib/ai.ts`, 14 analysis tests + 5 quota tests | See the "Análisis con IA" card |
 
 Where an integration is not configured, PACTO says so plainly on the screen
 instead of showing a simulated result. That is deliberate: nothing in this

@@ -91,8 +91,8 @@ but only after verifying it with PayPal.
 
 19
 00:01:40,000 --> 00:01:45,000
-A browser can never mark a milestone as paid.
-PayPal's signed webhook confirms it.
+A browser can never mark a milestone as paid:
+only PayPal's confirmation counts, with a signed webhook as backup.
 
 20
 00:01:45,000 --> 00:01:52,000

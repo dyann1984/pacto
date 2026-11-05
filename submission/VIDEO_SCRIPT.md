@@ -126,9 +126,11 @@ That is PACTO."
 - Judge Mode runs in one window, so there is nothing to arrange side by side.
 - Do not show any email address or identifier belonging to a real person.
 - Before recording, run `pnpm check:integrations` and confirm PayPal and the AI
-  key answer. **As of 12 October 2026 neither is configured in production**: the
-  live site honestly shows "todavía no está activado" for both. Recording first and discovering a "not activated" notice mid-take
-  wastes a session.
+  key answer. As of 5 November 2026 both are configured and live in production
+  (verified: the pay button appears after authorization, and a Sandbox capture
+  completed). A "not activated" notice mid-take wastes a session.
+- The canonical shot order and the 2:00 timing are in `submission/en/VIDEO_STORYBOARD.md`
+  and `VIDEO_SUBTITLES.srt`; this script is the longer narration.
 - **If the PayPal credentials are not configured when you record**, replace
   2:10–2:40 with the evidence and authorization steps only, and say: "With PayPal
   Sandbox credentials configured, the buyer is taken to PayPal to approve the
