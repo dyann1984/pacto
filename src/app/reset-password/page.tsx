@@ -48,8 +48,8 @@ export default async function ResetPassword({
         <h2>Nueva contraseña</h2>
         {!configured ? (
           <div className="notice" role="status">
-            <strong>Configuración pendiente</strong>
-            <p>Conecta Supabase para habilitar la recuperación.</p>
+            <strong>Recuperación no disponible por ahora</strong>
+            <p>Inténtalo de nuevo en unos minutos.</p>
           </div>
         ) : !hasSession ? (
           <div className="notice" role="alert">

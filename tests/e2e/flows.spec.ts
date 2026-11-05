@@ -35,25 +35,55 @@ test.afterAll(async () => {
   await contextB?.close();
 });
 
-test("buyer A signs in, creates a pacto, adds seller B and submits for review", async () => {
+test("buyer A creates a pacto and invites seller B with a secure link; B joins; A submits", async () => {
   await signIn(pageA, demo.aEmail, demo.aPassword);
   pactoId = await createPacto(pageA, `E2E cierre ${runId}`);
-  await pageA.locator('input[name="sellerId"]').fill(demo.bId);
-  await pageA.getByRole("button", { name: "Añadir proveedor" }).click();
-  await expect(pageA.getByText("Proveedor")).toBeVisible();
+  await expect(pageA.getByRole("heading", { name: "Invita a tu proveedor" })).toBeVisible();
+  await pageA.getByRole("button", { name: "Generar enlace de invitación" }).click();
+  const link = await pageA.getByLabel("Enlace de invitación").inputValue();
+  expect(link).toMatch(/\/invitacion\/[0-9a-f]{64}$/);
+
+  await signIn(pageB, demo.bEmail, demo.bPassword);
+  await pageB.goto(new URL(link).pathname);
+  await pageB.getByRole("button", { name: "Unirme como proveedor →" }).click();
+  await pageB.waitForURL(new RegExp(`/pactos/${pactoId}`));
+  await expect(pageB.getByText("Te uniste como proveedor")).toBeVisible();
+
+  await pageA.goto(`/pactos/${pactoId}`);
+  // B figura como participante (su nombre también aparece en la actividad).
+  await expect(pageA.locator(".participant").getByText(demo.bEmail)).toBeVisible();
   await pageA.getByRole("button", { name: "Enviar a revisión →" }).click();
-  await expectBadge(pageA, /REVIEW/);
+  await expectBadge(pageA, /En revisión/);
 });
 
-test("seller B signs in and accepts; buyer A accepts; agreement becomes ACCEPTED", async () => {
-  await signIn(pageB, demo.bEmail, demo.bPassword);
+test("seller B accepts; buyer A accepts; agreement becomes Aceptado", async () => {
   await pageB.goto(`/pactos/${pactoId}`);
   await pageB.getByRole("button", { name: /Aceptar versión 1/ }).click();
+  await expect(pageB.getByText("Esperando la aceptación de la otra parte")).toBeVisible();
   await pageA.goto(`/pactos/${pactoId}`);
   await pageA.getByRole("button", { name: /Aceptar versión 1/ }).click();
-  await expectBadge(pageA, /ACCEPTED/);
+  await expectBadge(pageA, /Aceptado/);
   await pageB.reload();
-  await expectBadge(pageB, /ACCEPTED/);
+  await expectBadge(pageB, /Aceptado/);
+});
+
+// El cierre exige entrega cumplida: el servidor lo rechaza y la interfaz no lo ofrece.
+test("the closure is not offered, nor accepted, before the delivery is authorized", async () => {
+  await pageA.goto(`/pactos/${pactoId}`);
+  await expect(pageA.getByRole("button", { name: "Confirmar cierre" })).toHaveCount(0);
+  await expect(pageA.getByText("Esperando la entrega del proveedor")).toBeVisible();
+
+  await pageB.goto(`/pactos/${pactoId}`);
+  await expect(pageB.getByRole("heading", { name: /Registra lo que entregaste/ })).toBeVisible();
+  await pageB.locator('textarea[name="evidence"]').fill("Entrega realizada y revisada con el cliente en la prueba E2E.");
+  await pageB.getByRole("button", { name: "Presentar evidencia" }).click();
+  await expect(pageB.getByText("Evidencia presentada. El cliente la revisará")).toBeVisible();
+
+  // Con evidencia pero sin autorizar, sigue sin poder cerrarse.
+  await pageA.goto(`/pactos/${pactoId}`);
+  await expect(pageA.getByRole("button", { name: "Confirmar cierre" })).toHaveCount(0);
+  await pageA.getByRole("button", { name: "Autorizar el pago de este hito" }).click();
+  await expect(pageA.getByText("Hito autorizado")).toBeVisible();
 });
 
 test("both parties confirm closure and the pacto ends CLOSED after a reload", async () => {
@@ -64,29 +94,36 @@ test("both parties confirm closure and the pacto ends CLOSED after a reload", as
 
   await pageB.goto(`/pactos/${pactoId}`);
   await pageB.getByRole("button", { name: "Confirmar cierre" }).click();
-  await expect(pageB.getByText("Ambas partes confirmaron")).toBeVisible();
+  // Texto completo del aviso: «Qué sigue» y la actividad repiten fragmentos parecidos.
+  await expect(pageB.getByText("Ambas partes confirmaron. El Pacto está cerrado.")).toBeVisible();
 
   await pageB.reload();
   await expectBadge(pageB, /Cerrado/);
-  await expect(pageB.getByText("Pacto cerrado")).toBeVisible();
+  await expect(pageB.getByRole("heading", { name: "Pacto cerrado" })).toBeVisible();
 });
 
 test("a closed pacto rejects further edits in the UI", async () => {
   await pageA.goto(`/pactos/${pactoId}`);
-  await expect(pageA.getByRole("button", { name: /Proponer nueva versión|Editar borrador/ })).toHaveCount(0);
+  await expect(pageA.getByText(/Proponer cambios|Editar el acuerdo/)).toHaveCount(0);
   await expect(pageA.getByRole("button", { name: "Confirmar cierre" })).toHaveCount(0);
 });
 
 test("AI analysis shows real findings or an explicit not-configured notice", async () => {
   await pageA.goto(`/pactos/${pactoId}`);
-  await pageA.getByRole("button", { name: /Analizar versión 1/ }).click();
   if (process.env.PACTO_E2E_AI === "configured") {
-    await expect(pageA.getByText("Análisis registrado")).toBeVisible();
+    await pageA.getByRole("button", { name: /Analizar versión 1/ }).click();
+    // Mientras tanto, el botón anuncia la espera y no admite otro clic (cada llamada se paga).
+    await expect(pageA.getByRole("button", { name: /Analizando el acuerdo/ })).toBeDisabled();
+    // Una llamada real al modelo tarda ~20 s; el servidor corta a los 90 s.
+    test.setTimeout(150_000);
+    await expect(pageA.getByText("Análisis registrado")).toBeVisible({ timeout: 95_000 });
+    await expect(pageA.getByText(/por claude-[\w.-]+ \(Anthropic\)/)).toBeVisible();
     await expect(pageA.locator(".finding").first()).toBeVisible();
-    await expect(pageA.getByText(/Modelo claude-/)).toBeVisible();
   } else {
-    await expect(pageA.getByText(/no está configurado/)).toBeVisible();
-    await expect(pageA.getByText("Aún no hay análisis registrado")).toBeVisible();
+    // Sin proveedor configurado no se ofrece un botón que fallaría ni resultados simulados.
+    await expect(pageA.getByRole("button", { name: /Analizar versión/ })).toHaveCount(0);
+    // Acotado a la IA: el pago con PayPal tiene su propio aviso de «no activado».
+    await expect(pageA.getByText(/análisis con IA todavía no está activado/)).toBeVisible();
   }
 });
 
@@ -97,7 +134,8 @@ test("buyer A cancels a second pacto with a reason; the cancellation is audited"
   await pageA.getByRole("button", { name: "Cancelar Pacto" }).click();
   await expect(pageA.getByText("El Pacto fue cancelado")).toBeVisible();
   await expectBadge(pageA, /Cancelado/);
-  await expect(pageA.getByText("Pacto cancelado")).toBeVisible();
+  // «Pacto cancelado» también es una entrada de la actividad: se comprueba el título.
+  await expect(pageA.getByRole("heading", { name: "Pacto cancelado" })).toBeVisible();
 });
 
 test("a user outside the pacto cannot open it (404, no leaked data)", async ({ browser }) => {

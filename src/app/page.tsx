@@ -23,21 +23,25 @@ export default function Landing() {
             Convierte tus acuerdos en <em>resultados reales.</em>
           </h1>
           <p className="hero-copy">
-            Define lo que esperas. Alinea cada entrega. Conserva el control de
-            las decisiones que importan. Comprador y proveedor aceptan la
-            misma versión, y cada decisión queda auditada.
+            Define lo que esperas y deja que la IA detecte los riesgos del acuerdo
+            antes de aceptarlo. Cada entrega se respalda con evidencia, se paga con
+            PayPal solo cuando el cliente la autoriza, y cada decisión queda auditada.
           </p>
           <div className="hero-actions">
             <Link className="button" href="/demo">
               Explorar DEMO <span>→</span>
+            </Link>
+            <Link className="button button-outline" href="/juez">
+              Modo Juez
             </Link>
             <Link className="button button-outline" href="/sign-up">
               Crear mi cuenta
             </Link>
           </div>
           <p className="fine-print">
-            Explora sin registrarte: sesión aislada y temporal, sin datos
-            reales. FOUNDATION · IA y pagos: próxima fase.
+            Explora sin registrarte: una sesión temporal y privada. ¿Evalúas PACTO?
+            El <Link href="/juez">Modo Juez</Link> te deja recorrer el ciclo completo
+            tú solo, actuando como cliente y como proveedor.
           </p>
         </div>
         <div className="brand-panel">
@@ -74,13 +78,28 @@ export default function Landing() {
             ],
             [
               "02",
-              "Revisa con la otra parte",
-              "Comprador y proveedor aceptan la misma versión.",
+              "La IA revisa el acuerdo",
+              "Señala ambigüedades, plazos ausentes, riesgos e inconsistencias antes de aceptar. Asiste; no decide por nadie.",
             ],
             [
               "03",
-              "Conserva la trazabilidad",
-              "Consulta quién hizo cada cambio y cuándo ocurrió.",
+              "Ambas partes aceptan",
+              "Comprador y proveedor aceptan exactamente la misma versión.",
+            ],
+            [
+              "04",
+              "Entrega con evidencia",
+              "El proveedor describe lo entregado; el cliente lo revisa y lo autoriza.",
+            ],
+            [
+              "05",
+              "Pago con PayPal",
+              "El cliente paga el hito autorizado con PayPal (Sandbox). Solo cuenta como pagado lo que PayPal confirma.",
+            ],
+            [
+              "06",
+              "Trazabilidad completa",
+              "Cada decisión, pago y reembolso queda en un registro inalterable.",
             ],
           ].map(([n, title, copy]) => (
             <article className="process-card" key={n}>
@@ -94,7 +113,7 @@ export default function Landing() {
       <footer>
         <Brand />
         <span>AI Commerce. Real Results.</span>
-        <span>PHASE 1 · FOUNDATION</span>
+        <span>Acuerdos claros entre comprador y proveedor</span>
       </footer>
     </main>
   );

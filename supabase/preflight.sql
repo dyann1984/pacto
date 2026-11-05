@@ -44,5 +44,22 @@ from (values
   ('demo: columna pactos.is_demo_example',
     exists(select 1 from information_schema.columns where table_schema='public' and table_name='pactos' and column_name='is_demo_example')),
   ('demo: rpc is_demo_pacto',
-    exists(select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname='is_demo_pacto'))
+    exists(select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname='is_demo_pacto')),
+  ('invitaciones: tabla invitations',
+    exists(select 1 from information_schema.tables where table_schema='public' and table_name='invitations')),
+  ('invitaciones: rpc accept_invitation',
+    exists(select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname='accept_invitation')),
+  ('pagos: tabla payments',
+    exists(select 1 from information_schema.tables where table_schema='public' and table_name='payments')),
+  ('pagos: rpc record_payment_result',
+    exists(select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname='record_payment_result')),
+  -- El cuerpo de la función es la única señal de esta migración: no crea objetos nuevos.
+  ('cierre: confirm_closure exige entrega cumplida',
+    exists(select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+           where n.nspname='public' and p.proname='confirm_closure'
+             and pg_get_functiondef(p.oid) like '%DELIVERY_REQUIRED%')),
+  ('pagos: la captura solo la afirma el servidor',
+    exists(select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+           where n.nspname='public' and p.proname='record_payment_result'
+             and pg_get_functiondef(p.oid) like '%CAPTURE_NOT_ALLOWED%'))
 ) as checks(check_name, ok);

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { supabase, isConfigured } from "@/lib/supabase";
 import { requestOrigin } from "@/lib/origin";
 import { signUpSchema } from "@/domain/account";
+import { isEmailRateLimited } from "@/lib/auth-errors";
 
 export async function signUp(form: FormData) {
   if (!isConfigured()) redirect("/sign-up?status=configuration");
@@ -27,6 +28,9 @@ export async function signUp(form: FormData) {
   if (error) {
     if (/already registered|user_already_exists/i.test(error.message))
       redirect("/sign-up?status=exists");
+    // Agotar el cupo de correo no es una avería: se arregla esperando, y la
+    // DEMO sigue disponible sin correo. Decirlo cambia lo que hace la persona.
+    if (isEmailRateLimited(error)) redirect("/sign-up?status=email-rate-limit");
     redirect("/sign-up?status=failed");
   }
   // Si la confirmación de correo está desactivada en el proyecto, Supabase ya

@@ -1,0 +1,110 @@
+1
+00:00:00,000 --> 00:00:05,000
+Small businesses close deals in chat messages.
+The buyer pays up front and hopes,
+
+2
+00:00:05,000 --> 00:00:10,000
+or the supplier delivers and waits.
+When something goes wrong, nobody can prove what was agreed.
+
+3
+00:00:10,000 --> 00:00:15,000
+PACTO fixes that. The interface is in Spanish,
+built for the Latin American market.
+
+4
+00:00:15,000 --> 00:00:20,000
+[Button: Modo Juez → Judge Mode]
+Judge Mode creates two real, isolated users —
+
+5
+00:00:20,000 --> 00:00:25,000
+buyer and supplier — so you can walk
+the whole deal alone.
+
+6
+00:00:25,000 --> 00:00:30,000
+[Button: Crear acuerdo → Create agreement]
+The buyer writes the scope and the amount:
+twenty-five thousand pesos.
+
+7
+00:00:30,000 --> 00:00:37,000
+[Button: Analizar versión 1 → Analyze version 1]
+Before anyone commits, Claude reviews the agreement.
+
+8
+00:00:37,000 --> 00:00:43,000
+While it works, the button says so —
+each analysis is a paid call, so it can't be clicked twice.
+
+9
+00:00:43,000 --> 00:00:50,000
+Every finding quotes the exact words that caused it:
+no deadline, an undefined redesign,
+
+10
+00:00:50,000 --> 00:00:55,000
+the whole amount in a single milestone —
+with a concrete suggestion for each.
+
+11
+00:00:55,000 --> 00:00:58,000
+It is assistance, not a decision: the AI never edits
+the agreement, never accepts, never pays.
+
+12
+00:00:58,000 --> 00:01:05,000
+[Button: Generar enlace de invitación → Generate invitation link]
+The supplier joins through a single-use, expiring link.
+
+13
+00:01:05,000 --> 00:01:10,000
+[Buttons: Enviar a revisión → Send for review / Aceptar → Accept]
+Both accept the same version —
+
+14
+00:01:10,000 --> 00:01:15,000
+change a word later and both must accept again.
+[Button: Actuar como cliente → Act as buyer]
+
+15
+00:01:15,000 --> 00:01:22,000
+The supplier submits evidence.
+Notice: the supplier has no button to authorize their own payment —
+
+16
+00:01:22,000 --> 00:01:27,000
+the database would refuse it.
+[Button: Autorizar el pago → Authorize payment]
+
+17
+00:01:27,000 --> 00:01:33,000
+The buyer reviews and authorizes.
+Only then does PayPal appear.
+
+18
+00:01:33,000 --> 00:01:40,000
+The buyer approves in PayPal Sandbox, and PACTO records the capture —
+but only after verifying it with PayPal.
+
+19
+00:01:40,000 --> 00:01:45,000
+A browser can never mark a milestone as paid:
+only PayPal's confirmation counts, with a signed webhook as backup.
+
+20
+00:01:45,000 --> 00:01:52,000
+[Button: Confirmar cierre → Confirm closure]
+Both sides confirm, and every step is on an audit trail nobody can edit.
+
+21
+00:01:52,000 --> 00:01:56,000
+For the buyer: no paying blind.
+For the supplier: proof of delivery and a clear path to getting paid.
+
+22
+00:01:56,000 --> 00:02:00,000
+For both: one version of the truth.
+PACTO. AI that advises, PayPal when a human says so.

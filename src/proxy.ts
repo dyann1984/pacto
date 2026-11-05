@@ -25,6 +25,7 @@ export const config = {
   matcher: [
     "/pactos/:path*",
     "/admin/:path*",
+    "/invitacion/:path*",
     "/sign-in",
     "/sign-up",
     "/forgot-password",

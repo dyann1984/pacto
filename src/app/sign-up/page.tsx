@@ -14,6 +14,12 @@ const messages: Record<string, { tone: "info" | "error"; text: string }> = {
     tone: "error",
     text: "Ya existe una cuenta con ese correo. Intenta iniciar sesión o recuperar tu contraseña.",
   },
+  // No es una avería, y la salida está en la propia pantalla: la DEMO no manda
+  // ningún correo, así que quien solo quiere ver PACTO no tiene que esperar.
+  "email-rate-limit": {
+    tone: "info",
+    text: "Se alcanzó el límite de correos de confirmación de esta hora, así que no podemos enviarte el tuyo ahora mismo. Tu cuenta no se ha creado: vuelve a intentarlo en unos minutos. Si solo quieres probar PACTO, «Explorar DEMO» entra sin correo ni contraseña.",
+  },
   failed: { tone: "error", text: "No se pudo completar el registro. Intenta de nuevo." },
 };
 
@@ -52,8 +58,8 @@ export default async function SignUp({
         <p>Recibirás un correo para confirmar tu dirección.</p>
         {!configured ? (
           <div className="notice" role="status">
-            <strong>Configuración pendiente</strong>
-            <p>Conecta Supabase para habilitar el registro.</p>
+            <strong>Registro no disponible por ahora</strong>
+            <p>Inténtalo de nuevo en unos minutos.</p>
           </div>
         ) : message ? (
           <div

@@ -3,6 +3,7 @@ import { Brand } from "@/components/brand";
 import { GoogleAuthButton } from "@/components/google-auth-button";
 import { PasswordField } from "@/components/password-field";
 import { isConfigured, isGoogleOAuthEnabled } from "@/lib/supabase";
+import { safeNextPath } from "@/lib/next-path";
 import { resendConfirmation, signIn } from "./actions";
 
 // Sin esto, Next.js puede servir una versión cacheada de la ruta y perder el
@@ -36,9 +37,11 @@ const messages: Record<string, { tone: "info" | "error"; text: string }> = {
 export default async function SignIn({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; next?: string }>;
 }) {
-  const { status } = await searchParams;
+  const { status, next: rawNext } = await searchParams;
+  const next = safeNextPath(rawNext);
+  const invited = next.startsWith("/invitacion/");
   const configured = isConfigured();
   const googleEnabled = configured ? await isGoogleOAuthEnabled() : false;
   const message = status ? messages[status] : undefined;
@@ -57,7 +60,6 @@ export default async function SignIn({
           </h1>
           <p>Alcance, participantes y decisiones en un mismo lugar.</p>
         </div>
-        <span className="fine-print">PACTO · FOUNDATION</span>
       </aside>
       <section className="auth-form">
         <Link className="back-link" href="/">
@@ -65,14 +67,15 @@ export default async function SignIn({
         </Link>
         <span className="eyebrow">BIENVENIDO A PACTO</span>
         <h2>Iniciar sesión</h2>
-        <p>Accede a los acuerdos en los que participas.</p>
+        <p>
+          {invited
+            ? "Entra con tu cuenta para ver la invitación y unirte al Pacto."
+            : "Accede a los acuerdos en los que participas."}
+        </p>
         {!configured ? (
           <div className="notice" role="status">
-            <strong>Configuración pendiente</strong>
-            <p>
-              Conecta Supabase y aplica las migraciones para habilitar el
-              acceso. No se ha creado una sesión DEMO.
-            </p>
+            <strong>Acceso no disponible por ahora</strong>
+            <p>Inténtalo de nuevo en unos minutos.</p>
           </div>
         ) : message ? (
           <div
@@ -82,11 +85,12 @@ export default async function SignIn({
             {message.text}
           </div>
         ) : null}
-        <GoogleAuthButton next="/pactos" enabled={googleEnabled} />
+        <GoogleAuthButton next={next} enabled={googleEnabled} />
         <p className="fine-print" style={{ textAlign: "center" }}>
           o con tu correo
         </p>
         <form action={signIn}>
+          <input type="hidden" name="next" value={next} />
           <label>
             Correo electrónico
             <input
@@ -107,6 +111,15 @@ export default async function SignIn({
           <button className="button" disabled={!configured}>
             Entrar a mis Pactos →
           </button>
+          {invited && (
+            <p className="fine-print">
+              ¿No tienes cuenta?{" "}
+              <Link href={`/demo?next=${encodeURIComponent(next)}`}>
+                Continúa como visitante DEMO
+              </Link>
+              .
+            </p>
+          )}
         </form>
         {status === "unconfirmed" && (
           <details className="revision" open>
