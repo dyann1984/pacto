@@ -19,7 +19,7 @@ Deadline: 12 November 2026, 12:00 PT.
 | 1.2 | LICENSE file in repo | **PASS** | MIT LICENSE added to the default branch `contest/cierre-ia-mvp` in commit `693a0f3` (pushed 5 Nov 2026). Owner confirmed directly on GitHub that the API returns `spdx_id: MIT`. |
 | 1.3 | All dependencies MIT/Apache-2.0 | **PASS** | 7 prod + 8 dev dependencies, all MIT or Apache-2.0. No copyleft. |
 | 1.4 | No secrets in repo | **PASS** | `pnpm check:secrets` (5 Nov 2026) — 42 bundle files + 165 tracked files scanned, 0 leaks. `.env.local` is git-ignored; only `.env.example` is tracked. |
-| 1.5 | English docs and app code public on the default branch | **PENDING** | Checked 5 Nov 2026 via raw.githubusercontent.com: `LICENSE` and `docs/judges-guide.md` return 200 on `contest/cierre-ia-mvp` and `production`, but `submission/en/*` returns 404 on both, and `src/app/juez` (Judge Mode) is absent from the default branch (98 files vs 177 on `hackathon/submission-final`). `hackathon/submission-final` (114 files differ from the default branch: 80 added, 34 modified, 0 deleted; `LICENSE` identical; typecheck and `check:secrets` pass on it) has no upstream and was never pushed; the default branch has one commit (`693a0f3`, LICENSE) that it lacks. A test merge of the default branch into it is conflict-free. **Needs the owner to push and merge.** |
+| 1.5 | English docs and app code public on the default branch | **PASS** | Before 5 Nov 2026 22:59 UTC, `submission/en/*` and `src/app/juez` (Judge Mode) were missing from the default branch `contest/cierre-ia-mvp`. Pull request #1 (https://github.com/dyann1984/pacto/pull/1) from `hackathon/submission-final` was merged as `0039f15`: 115 files changed per GitHub, 0 files deleted, `LICENSE` identical, CI `verify` passed, Vercel deployments were Preview only, `production` stayed at `fcb84dc`. Afterwards `raw.githubusercontent.com` returned 200 on `contest/cierre-ia-mvp` for `LICENSE`, `submission/en/README.md`, `JUDGE_INSTRUCTIONS.md`, `DEVPOST_TEXTS.md`, `YOUTUBE_METADATA.md`, `src/app/juez/page.tsx`, `src/lib/judge-session.ts`, `src/lib/paypal.ts` and the PayPal webhook route; GitHub reports the license as MIT. |
 
 ---
 
@@ -133,7 +133,7 @@ No action needed for 3.3: the Supabase project was resumed on 5 Nov 2026 (see 9.
 
 | Category | PASS | FAIL | PENDING |
 |---|---|---|---|
-| Repository and license | 4 | 0 | 1 (1.5) |
+| Repository and license | 5 | 0 | 0 |
 | English documentation | 10 | 0 | 0 |
 | Judge experience | 4 | 0 | 0 |
 | PayPal integration | 8 | 0 | 0 |
@@ -142,13 +142,13 @@ No action needed for 3.3: the Supabase project was resumed on 5 Nov 2026 (see 9.
 | Tests | 4 | 0 | 0 |
 | Video and Devpost | 5 | 0 | 2 |
 | Supabase project | 3 | 0 | 0 |
-| **Total** | **48** | **0** | **3** |
+| **Total** | **49** | **0** | **2** |
 
 ## Critical path to submission
 
 1. ~~Locate or restore the Supabase project~~ - done: it was paused and resumed on 5 Nov 2026 (see 9.1)
 2. ~~Add LICENSE to default branch~~ — done (`693a0f3`)
-2b. **Push `hackathon/submission-final` and merge it into the default branch** (owner action, fixes 1.5) — until then judges see neither the English docs nor Judge Mode code
+2b. ~~Push `hackathon/submission-final` and merge it into the default branch~~ — done 5 Nov 2026 (PR #1, merge `0039f15`, closes 1.5)
 3. **Record video** (human task, ~30 min including editing) — fixes 8.4
 4. **Upload to YouTube as Public** — fixes 8.6
 5. ~~Re-run the two pending `judge.spec.ts` specs~~ — done 5 Nov 2026, both pass (7.4)
